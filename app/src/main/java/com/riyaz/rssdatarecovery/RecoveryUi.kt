@@ -222,6 +222,7 @@ private fun screenTitle(screen: Screen) = when (screen) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun SettingsScreen(dark: Boolean, onDarkChange: (Boolean) -> Unit, palette: Palette, onPaletteChange: (Palette) -> Unit) {
     LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("Appearance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
