@@ -6,6 +6,8 @@
 
     <application
         android:theme="@style/Theme.RSSDataRecovery.Splash"
+        android:icon="@drawable/rss_data_recovery_logo"
+        android:roundIcon="@drawable/rss_data_recovery_logo"
         android:label="RSS Data Recovery"
         android:allowBackup="false"
         android:supportsRtl="true">
