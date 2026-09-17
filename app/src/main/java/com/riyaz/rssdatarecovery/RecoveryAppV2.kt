@@ -56,7 +56,7 @@ fun RecoveryAppV2() {
 }
 
 @Composable
-private fun BrandV2() {
+fun BrandV2() {
     Box(Modifier.size(68.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), Alignment.Center) {
         Icon(painterResource(com.riyaz.rssdatarecovery.R.drawable.rss_splash_icon), contentDescription = "RSS Data Recovery", modifier = Modifier.size(52.dp))
     }
