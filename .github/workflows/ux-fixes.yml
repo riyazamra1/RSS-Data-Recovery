@@ -18,14 +18,154 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
+
           styles = Path('app/src/main/res/values/styles.xml')
           t = styles.read_text()
           t = t.replace('<item name="android:postSplashScreenTheme">@style/Theme.RSSDataRecovery</item>\n', '')
           styles.write_text(t)
+
           p = Path('app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt')
           s = p.read_text()
+
+          # Android/device Back navigation only; no visible Back arrow.
           s = s.replace('else IconButton({ back() }) { Icon(Icons.Default.ArrowBack, "Back") }', '')
-          p.write_text(s)
+
+          # Animated, modern first-launch registration/welcome screen.
+          imports = '''import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+'''
+          anchor = 'import androidx.compose.foundation.background\n'
+          if 'rememberInfiniteTransition' not in s:
+              s = s.replace(anchor, anchor + imports)
+
+          new_registration = r'''@Composable private fun RegistrationV2(done: (String, String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    val transition = rememberInfiniteTransition(label = "welcomeBackground")
+    val drift1 by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(7000), RepeatMode.Reverse), label = "drift1")
+    val drift2 by transition.animateFloat(1f, 0f, infiniteRepeatable(tween(9000), RepeatMode.Reverse), label = "drift2")
+    val canContinue = name.trim().length > 1 && email.trim().contains("@") && email.trim().contains(".")
+
+    Box(Modifier.fillMaxSize().background(Color(0xFF070707))) {
+        Box(Modifier.fillMaxSize().background(
+            androidx.compose.ui.graphics.Brush.radialGradient(
+                colors = listOf(Color(0xFF4A3600).copy(alpha = 0.58f), Color.Transparent),
+                center = androidx.compose.ui.geometry.Offset(180f + drift1 * 220f, 120f + drift2 * 180f),
+                radius = 520f
+            )
+        ))
+        Box(Modifier.fillMaxSize().background(
+            androidx.compose.ui.graphics.Brush.radialGradient(
+                colors = listOf(Color(0xFFD8A928).copy(alpha = 0.20f), Color.Transparent),
+                center = androidx.compose.ui.geometry.Offset(850f - drift2 * 260f, 1050f - drift1 * 240f),
+                radius = 470f
+            )
+        ))
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 34.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                Modifier.size(92.dp).clip(CircleShape).background(Color(0xFF17130A)),
+                Alignment.Center
+            ) {
+                BrandV2()
+            }
+            Spacer(Modifier.height(22.dp))
+            Text("Welcome to", color = Color.White.copy(alpha = 0.70f), style = MaterialTheme.typography.titleMedium)
+            Text("RSS Data Recovery", color = Color(0xFFFFD76A), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Recover what matters.\nLet's set up your recovery profile.",
+                color = Color.White.copy(alpha = 0.78f),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Spacer(Modifier.height(26.dp))
+            Card(
+                Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.09f))
+            ) {
+                Column(Modifier.padding(20.dp)) {
+                    Text("Create your profile", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text("Your email becomes your unique RSS user ID.", color = Color.White.copy(alpha = 0.62f), style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Full name") },
+                        placeholder = { Text("Enter your name") },
+                        singleLine = true,
+                        leadingIcon = { Icon(Icons.Default.Person, null) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFFFD76A),
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.28f),
+                            focusedLabelColor = Color(0xFFFFD76A),
+                            unfocusedLabelColor = Color.White.copy(alpha = 0.65f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = Color(0xFFFFD76A),
+                            focusedLeadingIconColor = Color(0xFFFFD76A),
+                            unfocusedLeadingIconColor = Color.White.copy(alpha = 0.60f)
+                        )
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Email address") },
+                        placeholder = { Text("you@example.com") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        leadingIcon = { Icon(Icons.Default.Email, null) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFFFD76A),
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.28f),
+                            focusedLabelColor = Color(0xFFFFD76A),
+                            unfocusedLabelColor = Color.White.copy(alpha = 0.65f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = Color(0xFFFFD76A),
+                            focusedLeadingIconColor = Color(0xFFFFD76A),
+                            unfocusedLeadingIconColor = Color.White.copy(alpha = 0.60f)
+                        )
+                    )
+                    Spacer(Modifier.height(18.dp))
+                    Button(
+                        onClick = { done(name.trim(), email.trim()) },
+                        modifier = Modifier.fillMaxWidth().height(54.dp),
+                        enabled = canContinue,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC83D), contentColor = Color(0xFF191300))
+                    ) {
+                        Icon(Icons.Default.ArrowForward, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Continue to RSS Data Recovery", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Spacer(Modifier.height(18.dp))
+            Text("Secure profile setup • Razeen Secure Solution", color = Color.White.copy(alpha = 0.45f), style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+'''
+          pattern = r'@Composable private fun RegistrationV2\(done: \(String, String\) -> Unit\) \{.*?\n\}\n\n@OptIn\(ExperimentalMaterial3Api::class\)'
+          replacement = new_registration + '\n@OptIn(ExperimentalMaterial3Api::class)'
+          s2, count = re.subn(pattern, replacement, s, count=1, flags=re.S)
+          if count != 1:
+              raise SystemExit('RegistrationV2 block not found')
+          p.write_text(s2)
       - name: Build verification
         run: gradle :app:assembleDebug --no-daemon
       - name: Commit fixes
@@ -33,4 +173,4 @@ jobs:
           git config user.name 'rss-ux-fix-bot'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt app/src/main/res/values/styles.xml
-          git diff --cached --quiet || (git commit -m 'Fix splash theme and Android back navigation [ux-fix-bot]' && git push)
+          git diff --cached --quiet || (git commit -m 'Modernize first launch registration screen [ux-fix-bot]' && git push)
