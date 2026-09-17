@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -24,39 +24,11 @@ jobs:
           cache: gradle
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-
-      - name: Apply verified Compose fixes
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt')
-          s = p.read_text()
-          s = s.replace('RegistrationV3 { name, email ->', 'RegistrationV2 { name, email ->')
-          s = s.replace('val drawer = rememberDrawerState(if (menu) DrawerValue.Open else DrawerValue.Closed); LaunchedEffect(menu) { if (menu) drawer.open() else drawer.close() }', 'val context = LocalContext.current; val drawer = rememberDrawerState(if (menu) DrawerValue.Open else DrawerValue.Closed); LaunchedEffect(menu) { if (menu) drawer.open() else drawer.close() }')
-          s = s.replace('ModalNavigationDrawer(drawer, {', 'ModalNavigationDrawer(drawerState = drawer, drawerContent = {')
-          old = 'navigationIcon = { if (screen == RScreen.HOME) IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") } else IconButton({ back() }) { Icon(Icons.Default.ArrowBack, "Back") } }, actions = {'
-          new = 'navigationIcon = { if (screen == RScreen.HOME) IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") } }, actions = {'
-          s = s.replace(old, new)
-          old_scaffold = 'Scaffold(topBar = { TopAppBar(title = { Text(screen.name.lowercase().replace(\'_\', \' \').replaceFirstChar { it.uppercase() }) }, navigationIcon = { if (screen == RScreen.HOME) IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") } }, actions = { if (screen != RScreen.SETTINGS) IconButton({ go(RScreen.SETTINGS) }) { Icon(Icons.Default.Settings, "Settings") } }) }) { pad ->'
-          new_scaffold = 'Scaffold(topBar = { TopAppBar(title = { Text(screen.name.lowercase().replace(\'_\', \' \').replaceFirstChar { it.uppercase() }) }, navigationIcon = { if (screen == RScreen.HOME) IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") } }, actions = { if (screen != RScreen.SETTINGS) IconButton({ go(RScreen.SETTINGS) }) { Icon(Icons.Default.Settings, "Settings") } }) }, bottomBar = { NavigationBar { NavigationBarItem(selected = screen == RScreen.HOME, onClick = { home() }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") }); NavigationBarItem(selected = screen == RScreen.SCAN, onClick = { mode = RMode.QUICK; category = null; go(RScreen.SCAN) }, icon = { Icon(Icons.Default.FlashOn, null) }, label = { Text("Recover") }); NavigationBarItem(selected = screen == RScreen.RESULTS, onClick = { go(RScreen.RESULTS) }, icon = { Icon(Icons.Default.Folder, null) }, label = { Text("Results") }); NavigationBarItem(selected = screen == RScreen.PREMIUM, onClick = { go(RScreen.PREMIUM) }, icon = { Icon(Icons.Default.WorkspacePremium, null) }, label = { Text("Premium") }); NavigationBarItem(selected = screen == RScreen.SETTINGS, onClick = { go(RScreen.SETTINGS) }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") }) } }) { pad ->'
-          s = s.replace(old_scaffold, new_scaffold)
-          p.write_text(s)
-          PY
-
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon
-
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: rss-data-recovery-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-
-      - name: Commit verified source fixes
-        run: |
-          git config user.name 'rss-build-fix-bot'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt
-          git diff --cached --quiet || git commit -m 'Fix Compose shell and persistent bottom navigation'
-          git push
