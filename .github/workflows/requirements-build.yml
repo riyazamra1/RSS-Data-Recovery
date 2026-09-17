@@ -18,17 +18,16 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          import re
           p = Path('app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt')
           s = p.read_text()
 
-          # No visible Back arrow: keep Android/device Back navigation through BackHandler.
+          # No visible Back arrow: Android/device Back remains the navigation mechanism.
           old = '''navigationIcon = { if (screen == RScreen.HOME) IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") } else IconButton({ back() }) { Icon(Icons.Default.ArrowBack, "Back") } }'''
           new = '''navigationIcon = { if (screen == RScreen.HOME) IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") } }'''
           if old in s:
               s = s.replace(old, new, 1)
 
-          # Replace the legacy registration card with a modern animated welcome form.
+          # Modern first-launch registration.
           start = s.find('@Composable private fun RegistrationV2')
           end = s.find('\n@OptIn(ExperimentalMaterial3Api::class)', start)
           if start >= 0 and end > start:
@@ -60,18 +59,10 @@ jobs:
                 radius = 520f
             )
         ))
-        LazyColumn(
-            Modifier.fillMaxSize().padding(horizontal = 22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
+        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             item {
                 Box(Modifier.fillMaxWidth().padding(vertical = 20.dp)) {
-                    Card(
-                        Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(30.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.075f))
-                    ) {
+                    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.075f))) {
                         Column(Modifier.padding(26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Box(Modifier.size(82.dp).clip(CircleShape).background(Color(0xFF1A1408)), Alignment.Center) { BrandV2() }
                             Spacer(Modifier.height(20.dp))
@@ -84,9 +75,7 @@ jobs:
                             OutlinedTextField(email, { email = it }, Modifier.fillMaxWidth(), label = { Text("Email address") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Color.White.copy(alpha = 0.25f), focusedBorderColor = Color(0xFFFFC83D), unfocusedLabelColor = Color.White.copy(alpha = 0.55f), focusedLabelColor = Color(0xFFFFC83D), unfocusedTextColor = Color.White, focusedTextColor = Color.White))
                             Spacer(Modifier.height(20.dp))
                             Button({ done(name.trim(), email.trim()) }, Modifier.fillMaxWidth().height(54.dp), enabled = name.trim().length > 1 && email.contains("@"), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC83D), contentColor = Color(0xFF191300))) {
-                                Text("Continue", fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.width(8.dp))
-                                Icon(Icons.Default.ArrowForward, null)
+                                Text("Continue", fontWeight = FontWeight.Bold); Spacer(Modifier.width(8.dp)); Icon(Icons.Default.ArrowForward, null)
                             }
                             Spacer(Modifier.height(14.dp))
                             Text("Your details are used to create your RSS customer profile.", color = Color.White.copy(alpha = 0.42f), style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
@@ -99,6 +88,39 @@ jobs:
 }
 '''
               s = s[:start] + modern + s[end:]
+
+          # Free Quick Recovery can actually recover/save files, but intentionally degrades
+          # recovered quality. Premium unlocks original filename, metadata and best quality.
+          old_compare = '''"Recover & save files" to Pair("—", "✓"),
+        "Original filenames" to Pair("Preview", "✓"),
+        "Metadata preservation" to Pair("Preview", "✓"),'''
+          new_compare = '''"Recover & save files" to Pair("✓", "✓"),
+        "Original filenames" to Pair("Generic name", "Original"),
+        "Metadata preservation" to Pair("Not preserved", "Preserved"),
+        "Image quality" to Pair("Reduced", "Original / best available"),'''
+          if old_compare in s:
+              s = s.replace(old_compare, new_compare, 1)
+
+          old_scan = '''Text("Free users can scan and preview recoverable files. Premium is required only to save/recover selected files.", style = MaterialTheme.typography.bodySmall)'''
+          new_scan = '''Text(
+            if (mode == RMode.QUICK)
+                "Free Quick Recovery can recover and save files. Free recovery uses a reduced-quality copy with a generic filename and without original metadata. Premium preserves the original filename, available metadata and best available image quality."
+            else
+                "Deep Recovery scanning and preview are available to Free users. Premium is required to recover Deep Recovery results with original filename, metadata and best available quality.",
+            style = MaterialTheme.typography.bodySmall
+        )'''
+          if old_scan in s:
+              s = s.replace(old_scan, new_scan, 1)
+
+          old_results = '''Text("Recoverable files", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("Preview is free")'''
+          new_results = '''Text("Recoverable files", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("Quick Recovery can be recovered free with quality limits")'''
+          if old_results in s:
+              s = s.replace(old_results, new_results, 1)
+
+          old_feature = '''item { FeatureV2(Icons.Default.Save, "Save recovered files", "Save recovered files into the RSS Data Recovery folder.") }'''
+          new_feature = '''item { FeatureV2(Icons.Default.Save, "Save recovered files", "Free Quick Recovery can save reduced-quality copies. Premium unlocks original filenames, available metadata and best available image quality in the RSS Data Recovery folder.") }'''
+          if old_feature in s:
+              s = s.replace(old_feature, new_feature, 1)
 
           p.write_text(s)
       - name: Build debug APK
