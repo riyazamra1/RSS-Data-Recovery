@@ -31,6 +31,7 @@ jobs:
           from pathlib import Path
           p = Path('app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt')
           s = p.read_text()
+          s = s.replace('RegistrationV3 { name, email ->', 'RegistrationV2 { name, email ->')
           s = s.replace('val drawer = rememberDrawerState(if (menu) DrawerValue.Open else DrawerValue.Closed); LaunchedEffect(menu) { if (menu) drawer.open() else drawer.close() }', 'val context = LocalContext.current; val drawer = rememberDrawerState(if (menu) DrawerValue.Open else DrawerValue.Closed); LaunchedEffect(menu) { if (menu) drawer.open() else drawer.close() }')
           s = s.replace('ModalNavigationDrawer(drawer, {', 'ModalNavigationDrawer(drawerState = drawer, drawerContent = {')
           old = 'navigationIcon = { if (screen == RScreen.HOME) IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") } else IconButton({ back() }) { Icon(Icons.Default.ArrowBack, "Back") } }, actions = {'
