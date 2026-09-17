@@ -11,15 +11,44 @@ jobs:
         run: mkdir -p backup && git archive --format=zip --output="backup/${{ github.event.repository.name }}_${{ github.sha }}.zip" "${{ github.sha }}"
       - name: Install Drive client
         run: python3 -m pip install --quiet google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
-      - name: Upload
+      - name: Upload and retain 5 versions
         env: {GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}, GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}, REPO_NAME: ${{ github.event.repository.name }}, COMMIT_SHA: ${{ github.sha }}}
         run: |
           test -n "$GOOGLE_SERVICE_ACCOUNT_JSON" && test -n "$GOOGLE_DRIVE_FOLDER_ID"
-          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"; printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > "$GOOGLE_APPLICATION_CREDENTIALS"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > "$GOOGLE_APPLICATION_CREDENTIALS"
           python3 - <<'PY'
           import os
           from google.oauth2 import service_account
           from googleapiclient.discovery import build
           from googleapiclient.http import MediaFileUpload
-          c=service_account.Credentials.from_service_account_file(os.environ['GOOGLE_APPLICATION_CREDENTIALS'],scopes=['https://www.googleapis.com/auth/drive.file']); d=build('drive','v3',credentials=c,cache_discovery=False); r=os.environ['REPO_NAME']; s=os.environ['COMMIT_SHA']; root=os.environ['GOOGLE_DRIVE_FOLDER_ID']; q=f"'{root}' in parents and name = '{r}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"; f=d.files().list(q=q,fields='files(id)').execute().get('files',[]); fid=f[0]['id'] if f else d.files().create(body={'name':r,'mimeType':'application/vnd.google-apps.folder','parents':[root]},fields='id').execute()['id']; p=f"backup/{r}_{s}.zip"; d.files().create(body={'name':os.path.basename(p),'parents':[fid]},media_body=MediaFileUpload(p,mimetype='application/zip'),fields='id').execute(); print('Backup complete')
+
+          creds = service_account.Credentials.from_service_account_file(
+              os.environ['GOOGLE_APPLICATION_CREDENTIALS'],
+              scopes=['https://www.googleapis.com/auth/drive.file'])
+          drive = build('drive', 'v3', credentials=creds, cache_discovery=False)
+          repo = os.environ['REPO_NAME']
+          sha = os.environ['COMMIT_SHA']
+          root = os.environ['GOOGLE_DRIVE_FOLDER_ID']
+          q = f"'{root}' in parents and name = '{repo}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+          folders = drive.files().list(q=q, fields='files(id)').execute().get('files', [])
+          repo_folder = folders[0]['id'] if folders else drive.files().create(
+              body={'name': repo, 'mimeType': 'application/vnd.google-apps.folder', 'parents': [root]},
+              fields='id').execute()['id']
+
+          filename = f'{repo}_{sha}.zip'
+          path = f'backup/{filename}'
+          drive.files().create(
+              body={'name': filename, 'parents': [repo_folder]},
+              media_body=MediaFileUpload(path, mimetype='application/zip'),
+              fields='id').execute()
+
+          files = drive.files().list(
+              q=f"'{repo_folder}' in parents and trashed = false",
+              orderBy='createdTime desc',
+              pageSize=100,
+              fields='files(id,name,createdTime)').execute().get('files', [])
+          for old in files[5:]:
+              drive.files().delete(fileId=old['id']).execute()
+          print(f'Backup complete: {filename}; retained {min(len(files), 5)} versions')
           PY
