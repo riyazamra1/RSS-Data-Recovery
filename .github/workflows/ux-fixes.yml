@@ -19,10 +19,10 @@ jobs:
           from pathlib import Path
           p = Path('app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt')
           s = p.read_text()
-          s = s.replace('RegistrationV2 { name, email ->', 'RegistrationV3 { name, email ->')
+          s = s.replace('RegistrationV3 { name, email ->', 'RegistrationV2 { name, email ->')
+          s = s.replace('RegistrationV2 { name, email ->', 'RegistrationV2 { name, email ->')
           s = s.replace('private fun BrandV2()', 'fun BrandV2()')
           s = s.replace('ModalNavigationDrawer(\n        drawerState = drawer,\n        drawerContent = {', 'ModalNavigationDrawer(\n        drawerContent = {')
-          s = s.replace('else IconButton({ back() }) { Icon(Icons.Default.ArrowBack, "Back") }', '')
           p.write_text(s)
           styles = Path('app/src/main/res/values/styles.xml')
           styles.write_text(styles.read_text().replace('<item name="android:postSplashScreenTheme">@style/Theme.RSSDataRecovery</item>\n', ''))
@@ -40,4 +40,4 @@ jobs:
           git config user.name 'rss-ux-fix-bot'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt app/src/main/res/values/styles.xml
-          git diff --cached --quiet || (git commit -m 'Fix bottom navigation and build [ux-fix-bot]' && git push)
+          git diff --cached --quiet || (git commit -m 'Fix UX workflow build reference [ux-fix-bot]' && git push)
