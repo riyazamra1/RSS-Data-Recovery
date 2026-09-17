@@ -17,11 +17,11 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
           p = Path('app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt')
           s = p.read_text()
           s = s.replace('RegistrationV2 { name, email ->', 'RegistrationV3 { name, email ->')
           s = s.replace('private fun BrandV2()', 'fun BrandV2()')
+          s = s.replace('RecoveryShellV2(dark, { dark = it; prefs.edit().putBoolean("dark", it).apply() }, theme, { theme = it; prefs.edit().putInt("theme", it).apply() })', 'RecoveryShellV2(dark, { dark = it; prefs.edit().putBoolean("dark", it).apply() })')
           start = s.index('@OptIn(ExperimentalMaterial3Api::class)\n@Composable private fun RecoveryShellV2')
           end = s.index('@Composable private fun HomeV2', start)
           shell = r'''@OptIn(ExperimentalMaterial3Api::class)
@@ -53,9 +53,7 @@ jobs:
     BackHandler(menu || history.size > 1) { back() }
 
     val drawer = rememberDrawerState(DrawerValue.Closed)
-    LaunchedEffect(menu) {
-        if (menu) drawer.open() else drawer.close()
-    }
+    LaunchedEffect(menu) { if (menu) drawer.open() else drawer.close() }
 
     ModalNavigationDrawer(
         drawerState = drawer,
@@ -72,18 +70,6 @@ jobs:
                 DrawerV2("Deep Recovery", Icons.Default.Search, false) { mode = RMode.DEEP; category = null; go(RScreen.SCAN); menu = false }
                 DrawerV2("Recovery Results", Icons.Default.Folder, screen == RScreen.RESULTS) { go(RScreen.RESULTS); menu = false }
                 DrawerV2("Premium", Icons.Default.WorkspacePremium, screen == RScreen.PREMIUM) { go(RScreen.PREMIUM); menu = false }
-                Spacer(Modifier.height(6.dp))
-                Card(Modifier.padding(horizontal = 12.dp).fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.WorkspacePremium, null)
-                        Spacer(Modifier.width(8.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("Premium Upgrade", fontWeight = FontWeight.Bold)
-                            Text("Unlock recovery", style = MaterialTheme.typography.labelSmall)
-                        }
-                        Button({ go(RScreen.PREMIUM); menu = false }) { Text("Upgrade") }
-                    }
-                }
                 DrawerV2("Settings", Icons.Default.Settings, screen == RScreen.SETTINGS) { go(RScreen.SETTINGS); menu = false }
                 Spacer(Modifier.weight(1f))
                 HorizontalDivider()
@@ -102,47 +88,22 @@ jobs:
             topBar = {
                 TopAppBar(
                     title = { Text(screen.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }) },
-                    navigationIcon = {
-                        IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") }
-                    }
+                    navigationIcon = { IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") } }
                 )
             },
             bottomBar = {
-                NavigationBar {
-                    NavigationBarItem(
-                        selected = screen == RScreen.HOME,
-                        onClick = { home() },
-                        icon = { Icon(Icons.Default.Home, null) },
-                        label = { Text("Home") }
-                    )
-                    NavigationBarItem(
-                        selected = screen == RScreen.SCAN,
-                        onClick = { mode = RMode.QUICK; category = null; go(RScreen.SCAN) },
-                        icon = { Icon(Icons.Default.FlashOn, null) },
-                        label = { Text("Recover") }
-                    )
-                    NavigationBarItem(
-                        selected = screen == RScreen.RESULTS,
-                        onClick = { go(RScreen.RESULTS) },
-                        icon = { Icon(Icons.Default.Folder, null) },
-                        label = { Text("Results") }
-                    )
-                    NavigationBarItem(
-                        selected = screen == RScreen.PREMIUM,
-                        onClick = { go(RScreen.PREMIUM) },
-                        icon = { Icon(Icons.Default.WorkspacePremium, null) },
-                        label = { Text("Premium") }
-                    )
-                    NavigationBarItem(
-                        selected = screen == RScreen.SETTINGS,
-                        onClick = { go(RScreen.SETTINGS) },
-                        icon = { Icon(Icons.Default.Settings, null) },
-                        label = { Text("Settings") }
-                    )
+                NavigationBar(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    NavigationBarItem(screen == RScreen.HOME, { home() }, { Icon(Icons.Default.Home, "Home") }, label = { Text("Home") })
+                    NavigationBarItem(screen == RScreen.SCAN, { mode = RMode.QUICK; category = null; go(RScreen.SCAN) }, { Icon(Icons.Default.FlashOn, "Recover") }, label = { Text("Recover") })
+                    NavigationBarItem(screen == RScreen.RESULTS, { go(RScreen.RESULTS) }, { Icon(Icons.Default.Folder, "Results") }, label = { Text("Results") })
+                    NavigationBarItem(screen == RScreen.PREMIUM, { go(RScreen.PREMIUM) }, { Icon(Icons.Default.WorkspacePremium, "Premium") }, label = { Text("Premium") })
+                    NavigationBarItem(screen == RScreen.SETTINGS, { go(RScreen.SETTINGS) }, { Icon(Icons.Default.Settings, "Settings") }, label = { Text("Settings") })
                 }
             }
         ) { pad ->
-            Box(Modifier.padding(pad).fillMaxSize()) {
+            Box(Modifier.fillMaxSize().padding(pad)) {
                 when (screen) {
                     RScreen.HOME -> HomeV2(
                         { mode = RMode.QUICK; category = null; go(RScreen.SCAN) },
@@ -181,4 +142,4 @@ jobs:
           git config user.name 'rss-ux-fix-bot'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt app/src/main/res/values/styles.xml
-          git diff --cached --quiet || (git commit -m 'Add persistent bottom navigation and fix shell build [ux-fix-bot]' && git push)
+          git diff --cached --quiet || (git commit -m 'Fix persistent bottom navigation and recovery shell [ux-fix-bot]' && git push)
