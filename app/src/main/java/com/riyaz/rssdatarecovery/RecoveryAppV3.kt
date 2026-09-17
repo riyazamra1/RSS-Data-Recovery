@@ -1,139 +1,109 @@
 package com.riyaz.rssdatarecovery
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.DateFormat
+import java.util.Date
 
 private enum class Page { HOME, SCAN, RESULTS, PREMIUM, SETTINGS, HISTORY }
 private enum class Mode { QUICK, DEEP }
-private data class FoundFile(val name: String, val size: Long, val uri: Uri)
+private enum class Category { IMAGE, AUDIO, VIDEO, FILES, DOCUMENTS }
+private data class FoundFile(val name:String,val size:Long,val uri:Uri,val category:Category,val modified:Long)
 
-private val themeColors = listOf(Color(0xFF9A6B08), Color(0xFF1769AA), Color(0xFF147D64), Color(0xFF7046A8))
+private val palettes=listOf(
+ listOf(Color(0xFFB7791F),Color(0xFFF6D365)),listOf(Color(0xFF1677FF),Color(0xFF67D5FF)),
+ listOf(Color(0xFF0E9F6E),Color(0xFF65D6A6)),listOf(Color(0xFF8B5CF6),Color(0xFFE0B7FF)))
 
-@Composable
-fun RecoveryAppV3() {
-    val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("rss_recovery", 0) }
-    var registered by remember { mutableStateOf(prefs.getBoolean("registered", false)) }
-    var dark by remember { mutableStateOf(prefs.getBoolean("dark", false)) }
-    var theme by remember { mutableIntStateOf(prefs.getInt("theme", 0).coerceIn(0, 3)) }
-    val primary = themeColors[theme]
-    MaterialTheme(if (dark) darkColorScheme(primary = primary) else lightColorScheme(primary = primary)) {
-        if (!registered) RegistrationScreen { name, email ->
-            prefs.edit().putBoolean("registered", true).putString("name", name).putString("email", email).apply()
-            registered = true
-        } else RecoveryMain(prefs, dark, { dark = it; prefs.edit().putBoolean("dark", it).apply() }, theme, { theme = it; prefs.edit().putInt("theme", it).apply() })
-    }
+@Composable fun RecoveryAppV3(){
+ val c=LocalContext.current; val p=remember{c.getSharedPreferences("rss_recovery",0)}
+ var reg by remember{mutableStateOf(p.getBoolean("registered",false))}; var welcome by remember{mutableStateOf(p.getBoolean("welcome_done",false))}
+ var dark by remember{mutableStateOf(p.getBoolean("dark",false))}; var theme by remember{mutableIntStateOf(p.getInt("theme",0).coerceIn(0,3))}
+ val pc=palettes[theme]; val scheme=if(dark)darkColorScheme(primary=pc[0],secondary=pc[1]) else lightColorScheme(primary=pc[0],secondary=pc[1])
+ MaterialTheme(colorScheme=scheme){AnimatedContent(reg to welcome,transitionSpec={fadeIn(tween(300)) togetherWith fadeOut(tween(200))},label="entry"){s->when{!s.first->RegistrationScreen{n,e->p.edit().putBoolean("registered",true).putString("name",n).putString("email",e).apply();reg=true}};!s.second->WelcomeScreen(p.getString("name","USER")!!){p.edit().putBoolean("welcome_done",true).apply();welcome=true};else->RecoveryMain(p,dark,{dark=it;p.edit().putBoolean("dark",it).apply()},theme){theme=it;p.edit().putInt("theme",it).apply()}}}}
 }
 
-@Composable
-private fun RegistrationScreen(done: (String, String) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    Box(Modifier.fillMaxSize(), Alignment.Center) {
-        Card(Modifier.fillMaxWidth().padding(24.dp), shape = RoundedCornerShape(28.dp)) {
-            Column(Modifier.padding(24.dp)) {
-                Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.height(14.dp))
-                Text("RSS Data Recovery", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("Create your profile")
-                Spacer(Modifier.height(18.dp))
-                OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Full name") }, singleLine = true)
-                Spacer(Modifier.height(10.dp))
-                OutlinedTextField(value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Email address") }, singleLine = true)
-                Spacer(Modifier.height(18.dp))
-                Button(onClick = { done(name.trim(), email.trim()) }, modifier = Modifier.fillMaxWidth(), enabled = name.trim().length > 1 && email.contains("@")) { Text("Continue") }
-            }
-        }
-    }
+@Composable private fun AnimatedBackdrop(){val t=rememberInfiniteTransition(label="bg");val x by t.animateFloat(0f,1f,infiniteRepeatable(tween(6500),RepeatMode.Reverse),label="x");Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF07111F),Color(0xFF17304A),Color(0xFF090D16)),start=androidx.compose.ui.geometry.Offset(x*900,0f),end=androidx.compose.ui.geometry.Offset(0f,1500f))))}
+
+@Composable private fun RegistrationScreen(done:(String,String)->Unit){var n by remember{mutableStateOf("")};var e by remember{mutableStateOf("")};Box(Modifier.fillMaxSize()){AnimatedBackdrop();Card(Modifier.fillMaxWidth().padding(22.dp).align(Alignment.Center),shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(Color.White.copy(.13f)),elevation=CardDefaults.cardElevation(10.dp)){Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){Icon(Icons.Default.Security,null,Modifier.size(52.dp),tint=Color(0xFFFFD166));Text("RSS DATA RECOVERY",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("CREATE YOUR PROFILE",color=Color.White,fontWeight=FontWeight.Bold);OutlinedTextField(n,{n=it},Modifier.fillMaxWidth(),label={Text("FULL NAME",color=Color.White)},singleLine=true,textStyle=LocalTextStyle.current.copy(color=Color.White),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Text));OutlinedTextField(e,{e=it},Modifier.fillMaxWidth(),label={Text("EMAIL ADDRESS",color=Color.White)},singleLine=true,textStyle=LocalTextStyle.current.copy(color=Color.White),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Email));Button({done(n.trim(),e.trim())},Modifier.fillMaxWidth(),enabled=n.trim().length>1&&e.contains("@")){Text("CONTINUE")}}}}}
+
+@Composable private fun WelcomeScreen(name:String,done:()->Unit){val t=rememberInfiniteTransition(label="welcome");val a by t.animateFloat(.55f,1f,infiniteRepeatable(tween(1200),RepeatMode.Reverse),label="a");Box(Modifier.fillMaxSize()){AnimatedBackdrop();Card(Modifier.fillMaxWidth().padding(22.dp).align(Alignment.Center),shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(Color.White.copy(.13f)),elevation=CardDefaults.cardElevation(12.dp)){Column(Modifier.padding(28.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)){Text("CONGRATULATIONS 👏🎉",color=Color(0xFFFFD166),style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("WELCOME, ${name.uppercase()}!",color=Color.White.copy(a),style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);Text("YOUR RECOVERY SPACE IS READY.",color=Color.White,fontWeight=FontWeight.SemiBold);Button(done,Modifier.fillMaxWidth()){Text("GET STARTED")}}}}}
+
+@OptIn(ExperimentalMaterial3Api::class) @Composable private fun RecoveryMain(p:SharedPreferences,dark:Boolean,setDark:(Boolean)->Unit,theme:Int,setTheme:(Int)->Unit){
+ val c=LocalContext.current;var page by remember{mutableStateOf(Page.HOME)};var mode by remember{mutableStateOf(Mode.QUICK)};var cat by remember{mutableStateOf<Category?>(null)};var drawer by remember{mutableStateOf(false)};var files by remember{mutableStateOf(emptyList<FoundFile>())};var scanning by remember{mutableStateOf(false)};var progress by remember{mutableFloatStateOf(0f)};var count by remember{mutableIntStateOf(0)};val scope=rememberCoroutineScope();val notifyPermission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){}
+ val name=p.getString("name","USER")!!;val email=p.getString("email","")!!;fun go(x:Page){page=x;drawer=false};BackHandler(drawer){drawer=false};val ds=rememberDrawerState(if(drawer)DrawerValue.Open else DrawerValue.Closed);LaunchedEffect(drawer){if(drawer)ds.open()else ds.close()};LaunchedEffect(scanning){if(scanning){if(Build.VERSION.SDK_INT>=33&&ContextCompat.checkSelfPermission(c,Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS);scanNotification(c,true)}else scanNotification(c,false)}
+ ModalNavigationDrawer(drawerState=ds,drawerContent={ModalDrawerSheet{Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.AccountCircle,null,Modifier.size(42.dp),tint=Color(0xFFFFB703));Spacer(Modifier.width(10.dp));Column{Text("WELCOME, ${name.uppercase()}",fontWeight=FontWeight.ExtraBold);Text(email,style=MaterialTheme.typography.bodySmall)}}Spacer(Modifier.height(10.dp));DItem("Home",Icons.Default.Home,Color(0xFF2E86DE)){go(Page.HOME)};DItem("Recovery",Icons.Default.Restore,Color(0xFFE67E22)){mode=Mode.QUICK;cat=null;go(Page.SCAN)};DItem("Results",Icons.Default.Folder,Color(0xFF16A085)){go(Page.RESULTS)};DItem("Recovery history",Icons.Default.History,Color(0xFF8E44AD)){go(Page.HISTORY)};DItem("Premium upgrade",Icons.Default.Star,Color(0xFFFFB703)){go(Page.PREMIUM)};DItem("Settings",Icons.Default.Settings,Color(0xFF5C677D)){go(Page.SETTINGS)}};Spacer(Modifier.weight(1f));HorizontalDivider();Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.VerifiedUser,null,tint=Color(0xFFFFB703));Spacer(Modifier.width(8.dp));Text("RAZEEN SECURE SOLUTION",fontWeight=FontWeight.Bold)};CItem("077 115 5504",Icons.Default.Phone,Color(0xFF27AE60)){c.startActivity(Intent(Intent.ACTION_DIAL,Uri.parse("tel:+94771155504")))};CItem("rsscctvsolution@gmail.com",Icons.Default.Email,Color(0xFF2980B9)){c.startActivity(Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:rsscctvsolution@gmail.com")))};CItem("www.rsscctvsolution.eu.cc",Icons.Default.Language,Color(0xFF8E44AD)){c.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.rsscctvsolution.eu.cc")))}}}}}){
+ Scaffold(topBar={TopAppBar(title={Text(title(page,mode))},navigationIcon={IconButton({drawer=true}){Icon(Icons.Default.Menu,"Menu")}})},bottomBar={NavigationBar(Modifier.shadow(5.dp),tonalElevation=3.dp){NItem(Page.HOME,"Home",Icons.Default.Home,Color(0xFF2E86DE),page){go(Page.HOME)};NItem(Page.SCAN,"Recover",Icons.Default.Restore,Color(0xFFE67E22),page){mode=Mode.QUICK;go(Page.SCAN)};NItem(Page.RESULTS,"Results",Icons.Default.Folder,Color(0xFF16A085),page){go(Page.RESULTS)};NItem(Page.SETTINGS,"Settings",Icons.Default.Settings,Color(0xFF8E44AD),page){go(Page.SETTINGS)}}}){pad->Box(Modifier.padding(pad).fillMaxSize()){when(page){Page.HOME->Home({mode=Mode.QUICK;cat=null;go(Page.SCAN)},{mode=Mode.DEEP;cat=null;go(Page.SCAN)},{go(Page.HISTORY)}){cat=it;mode=Mode.QUICK;go(Page.SCAN)};Page.SCAN->Scan(mode,cat,scanning,progress,count,{progress=it},{scanning=it},{files=it;count=it.size;go(Page.RESULTS)},scope,p);Page.RESULTS->Results(files,p.getBoolean("premium",false),{go(Page.PREMIUM)});Page.PREMIUM->Premium(p.getBoolean("premium",false));Page.HISTORY->History(p);Page.SETTINGS->Settings(p,dark,setDark,theme,setTheme)}}}}}
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun RecoveryMain(prefs: android.content.SharedPreferences, dark: Boolean, setDark: (Boolean) -> Unit, theme: Int, setTheme: (Int) -> Unit) {
-    val context = LocalContext.current
-    var page by remember { mutableStateOf(Page.HOME) }
-    var mode by remember { mutableStateOf(Mode.QUICK) }
-    var drawerOpen by remember { mutableStateOf(false) }
-    var files by remember { mutableStateOf(emptyList<FoundFile>()) }
-    var scanning by remember { mutableStateOf(false) }
-    var progress by remember { mutableFloatStateOf(0f) }
-    val scope = rememberCoroutineScope()
-    fun back() { if (drawerOpen) drawerOpen = false else page = Page.HOME }
-    BackHandler(page != Page.HOME || drawerOpen) { back() }
-    val drawerState = rememberDrawerState(if (drawerOpen) DrawerValue.Open else DrawerValue.Closed)
-    LaunchedEffect(drawerOpen) { if (drawerOpen) drawerState.open() else drawerState.close() }
-    ModalNavigationDrawer(drawerState = drawerState, drawerContent = {
-        ModalDrawerSheet {
-            Text("RSS Data Recovery", modifier = Modifier.padding(20.dp), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            DrawerItem("Home", Icons.Default.Home) { page = Page.HOME; drawerOpen = false }
-            DrawerItem("Recovery", Icons.Default.Restore) { page = Page.SCAN; drawerOpen = false }
-            DrawerItem("Results", Icons.Default.Folder) { page = Page.RESULTS; drawerOpen = false }
-            DrawerItem("Recovery history", Icons.Default.History) { page = Page.HISTORY; drawerOpen = false }
-            DrawerItem("Premium", Icons.Default.Star) { page = Page.PREMIUM; drawerOpen = false }
-            DrawerItem("Settings", Icons.Default.Settings) { page = Page.SETTINGS; drawerOpen = false }
-            Spacer(Modifier.weight(1f)); HorizontalDivider()
-            ContactItem("077 115 5504", Icons.Default.Phone) { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:+94771155504"))) }
-            ContactItem("rsscctvsolution@gmail.com", Icons.Default.Email) { context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:rsscctvsolution@gmail.com"))) }
-            ContactItem("www.rsscctvsolution.eu.cc", Icons.Default.Language) { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc"))) }
-            Spacer(Modifier.height(14.dp))
-        }
-    }) {
-        Scaffold(topBar = { TopAppBar(title = { Text(pageTitle(page, mode)) }, navigationIcon = { IconButton(onClick = { if (page == Page.HOME) drawerOpen = true else back() }) { Icon(if (page == Page.HOME) Icons.Default.Menu else Icons.Default.ArrowBack, contentDescription = null) } }) }, bottomBar = {
-            NavigationBar {
-                NavigationBarItem(selected = page == Page.HOME, onClick = { page = Page.HOME }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
-                NavigationBarItem(selected = page == Page.SCAN, onClick = { page = Page.SCAN }, icon = { Icon(Icons.Default.Restore, null) }, label = { Text("Recover") })
-                NavigationBarItem(selected = page == Page.RESULTS, onClick = { page = Page.RESULTS }, icon = { Icon(Icons.Default.Folder, null) }, label = { Text("Results") })
-                NavigationBarItem(selected = page == Page.SETTINGS, onClick = { page = Page.SETTINGS }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") })
-            }
-        }) { padding ->
-            Box(Modifier.padding(padding).fillMaxSize()) {
-                when (page) {
-                    Page.HOME -> HomeScreen({ mode = Mode.QUICK; page = Page.SCAN }, { mode = Mode.DEEP; page = Page.SCAN }, { page = Page.HISTORY })
-                    Page.SCAN -> ScanScreen(mode, scanning, progress, { progress = it }, { scanning = it }, { files = it; page = Page.RESULTS }, scope)
-                    Page.RESULTS -> ResultsScreen(files) { page = Page.PREMIUM }
-                    Page.PREMIUM -> PremiumScreen()
-                    Page.HISTORY -> HistoryScreen(prefs)
-                    Page.SETTINGS -> SettingsScreen(dark, setDark, theme, setTheme)
-                }
-            }
-        }
-    }
-}
+@Composable private fun DItem(t:String,i:ImageVector,c:Color,go:()->Unit){NavigationDrawerItem({Text(t)},false,go,icon={Icon(i,null,tint=c)},modifier=Modifier.padding(vertical=2.dp))}
+@Composable private fun CItem(t:String,i:ImageVector,c:Color,go:()->Unit){Row(Modifier.fillMaxWidth().clickable{go()}.padding(vertical=5.dp),verticalAlignment=Alignment.CenterVertically){Icon(i,null,Modifier.size(19.dp),tint=c);Spacer(Modifier.width(9.dp));Text(t,style=MaterialTheme.typography.bodySmall)}}
+@Composable private fun NItem(p:Page,t:String,i:ImageVector,c:Color,current:Page,go:()->Unit){NavigationBarItem(current==p,go,icon={Icon(i,null,tint=c)},label={Text(t)})}
+private fun title(p:Page,m:Mode)=when(p){Page.HOME->"Home";Page.SCAN->if(m==Mode.QUICK)"Quick Recovery"else"Deep Recovery";Page.RESULTS->"Results";Page.PREMIUM->"Premium";Page.SETTINGS->"Settings";Page.HISTORY->"Recovery History"}
 
-@Composable private fun DrawerItem(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, click: () -> Unit) { NavigationDrawerItem(label = { Text(text) }, selected = false, onClick = click, icon = { Icon(icon, null) }, modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp)) }
-@Composable private fun ContactItem(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, click: () -> Unit) { Row(Modifier.fillMaxWidth().clickable { click() }.padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(10.dp)); Text(text, style = MaterialTheme.typography.bodySmall) } }
-private fun pageTitle(page: Page, mode: Mode) = when (page) { Page.HOME -> "Home"; Page.SCAN -> if (mode == Mode.QUICK) "Quick Recovery" else "Deep Recovery"; Page.RESULTS -> "Results"; Page.PREMIUM -> "Premium"; Page.SETTINGS -> "Settings"; Page.HISTORY -> "Recovery history" }
+@Composable private fun Home(quick:()->Unit,deep:()->Unit,history:()->Unit,category:(Category)->Unit){LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(11.dp)){item{Text("RECOVER YOUR FILES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("SCAN, PREVIEW AND RECOVER SAFELY",style=MaterialTheme.typography.bodySmall)};item{Card(Modifier.shadow(3.dp,RoundedCornerShape(18.dp)),elevation=CardDefaults.cardElevation(2.dp)){Column(Modifier.padding(14.dp)){Text("STORAGE",fontWeight=FontWeight.Bold);Text("READY TO SCAN",style=MaterialTheme.typography.bodySmall);Spacer(Modifier.height(7.dp));LinearProgressIndicator({.62f},Modifier.fillMaxWidth())}}};item{Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){A("Quick Recovery",Icons.Default.FlashOn,Color(0xFFE67E22),quick,Modifier.weight(1f));A("Deep Recovery",Icons.Default.Search,Color(0xFF8E44AD),deep,Modifier.weight(1f))}};item{Text("RECOVERY BY CATEGORY",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.ExtraBold)};item{LazyVerticalGrid(GridCells.Fixed(2),Modifier.height(295.dp),verticalArrangement=Arrangement.spacedBy(9.dp),horizontalArrangement=Arrangement.spacedBy(9.dp),userScrollEnabled=false){items(Category.values().toList()){x->val d=info(x);A(d.first,d.second,d.third,{category(x)},Modifier.fillMaxWidth())}}};item{OutlinedButton(history,Modifier.fillMaxWidth()){Icon(Icons.Default.History,null);Spacer(Modifier.width(6.dp));Text("RECOVERY HISTORY")}}}}
+private fun info(c:Category)=when(c){Category.IMAGE->Triple("Images",Icons.Default.Image,Color(0xFF27AE60));Category.AUDIO->Triple("Audio",Icons.Default.MusicNote,Color(0xFF2980B9));Category.VIDEO->Triple("Video",Icons.Default.VideoLibrary,Color(0xFFE74C3C));Category.FILES->Triple("Files",Icons.Default.InsertDriveFile,Color(0xFFF39C12));Category.DOCUMENTS->Triple("Documents",Icons.Default.Description,Color(0xFF8E44AD))}
+@Composable private fun A(t:String,i:ImageVector,c:Color,go:()->Unit,m:Modifier){Card(m.clickable{go()}.shadow(3.dp,RoundedCornerShape(17.dp)),shape=RoundedCornerShape(17.dp),elevation=CardDefaults.cardElevation(2.dp)){Column(Modifier.padding(13.dp)){Icon(i,null,Modifier.size(30.dp),tint=c);Spacer(Modifier.height(6.dp));Text(t,fontWeight=FontWeight.Bold)}}}
 
-@Composable private fun HomeScreen(quick: () -> Unit, deep: () -> Unit, history: () -> Unit) { LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) { item { Text("Recover files", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Text("Scan accessible storage and preview files before recovery.") }; item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp)) { Text("Storage", fontWeight = FontWeight.Bold); Text("Internal storage ready", style = MaterialTheme.typography.bodySmall); Spacer(Modifier.height(10.dp)); LinearProgressIndicator(progress = { 0.62f }, modifier = Modifier.fillMaxWidth()) } } }; item { Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { ActionCard("Quick Recovery", Icons.Default.FlashOn, quick, Modifier.weight(1f)); ActionCard("Deep Recovery", Icons.Default.Search, deep, Modifier.weight(1f)) } }; item { OutlinedButton(onClick = history, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.History, null); Spacer(Modifier.width(6.dp)); Text("Recovery history") } }; item { Card(Modifier.fillMaxWidth()) { Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Lock, null); Spacer(Modifier.width(10.dp)); Column { Text("Free scan", fontWeight = FontWeight.Bold); Text("Scanning and preview are free. Recovery requires Premium.", style = MaterialTheme.typography.bodySmall) } } } } } }
-@Composable private fun ActionCard(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, click: () -> Unit, modifier: Modifier) { Card(modifier.clickable { click() }) { Column(Modifier.padding(18.dp)) { Icon(icon, contentDescription = null, modifier = Modifier.size(30.dp), tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.height(10.dp)); Text(text, fontWeight = FontWeight.Bold) } } }
+@Composable private fun Scan(mode:Mode,cat:Category?,scanning:Boolean,progress:Float,count:Int,setProgress:(Float)->Unit,setScanning:(Boolean)->Unit,done:(List<FoundFile>)->Unit,scope:kotlinx.coroutines.CoroutineScope,p:SharedPreferences){val c=LocalContext.current;var paused by remember{mutableStateOf(false)};val perm=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){};LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(11.dp)){item{Card(Modifier.shadow(3.dp,RoundedCornerShape(18.dp)),elevation=CardDefaults.cardElevation(2.dp)){Column(Modifier.padding(14.dp)){Text(if(mode==Mode.QUICK)"QUICK RECOVERY"else"DEEP RECOVERY",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.ExtraBold);if(cat!=null)Text(info(cat).first.uppercase(),color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold)}}};item{Card(Modifier.shadow(3.dp,RoundedCornerShape(18.dp)),elevation=CardDefaults.cardElevation(2.dp)){Column(Modifier.padding(14.dp)){if(scanning){LinearProgressIndicator({progress},Modifier.fillMaxWidth());Spacer(Modifier.height(8.dp));Text("${(progress*100).toInt()}% • $count FILES");Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){OutlinedButton({paused=!paused}){Text(if(paused)"RESUME"else"PAUSE")};OutlinedButton({setScanning(false);paused=false}){Text("CANCEL")}}}else{Text("READY TO SCAN",fontWeight=FontWeight.Bold);Spacer(Modifier.height(9.dp));Button({if(Build.VERSION.SDK_INT>=33)perm.launch(arrayOf(Manifest.permission.READ_MEDIA_IMAGES,Manifest.permission.READ_MEDIA_VIDEO,Manifest.permission.READ_MEDIA_AUDIO));setScanning(true);setProgress(0f);scope.launch{val r=query(c,cat);for(i in 1..24){while(paused)delay(100);delay(if(mode==Mode.DEEP)55 else 30);setProgress(i/24f)};p.edit().putString("last_scan",DateFormat.getDateTimeInstance().format(Date())).putInt("last_count",r.size).apply();setScanning(false);done(r)}},Modifier.fillMaxWidth()){Text("START SCAN")}}}}};item{Text(if(mode==Mode.DEEP)"FREE USERS CAN SCAN AND VIEW FILES. RECOVERY REQUIRES PREMIUM."else"FREE USERS CAN RECOVER IMAGES ONLY WITH A NEW NAME AND REDUCED QUALITY.",style=MaterialTheme.typography.bodySmall)}}}
 
-@Composable private fun ScanScreen(mode: Mode, scanning: Boolean, progress: Float, setProgress: (Float) -> Unit, setScanning: (Boolean) -> Unit, done: (List<FoundFile>) -> Unit, scope: kotlinx.coroutines.CoroutineScope) { val context = LocalContext.current; LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) { item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp)) { Text(if (mode == Mode.QUICK) "Quick Recovery" else "Deep Recovery", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("Accessible files are scanned. Deleted-file recovery depends on Android storage access.") } } }; item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp)) { if (scanning) { LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(10.dp)); Text("Scanning ${(progress * 100).toInt()}%") } else { Text("Ready to scan", fontWeight = FontWeight.Bold); Spacer(Modifier.height(12.dp)); Button(onClick = { setScanning(true); setProgress(0f); scope.launch { val result = queryMedia(context); for (i in 1..20) { delay(if (mode == Mode.QUICK) 25 else 45); setProgress(i / 20f) }; setScanning(false); done(result) } }, modifier = Modifier.fillMaxWidth()) { Text("Start scan") } } } } }; item { Text("Free users can scan and preview candidates. Saving recovered files requires Premium.") } } }
+private suspend fun query(c:Context,cat:Category?):List<FoundFile>=withContext(Dispatchers.IO){val out=mutableListOf<FoundFile>();val u=MediaStore.Files.getContentUri("external");val q=arrayOf(MediaStore.Files.FileColumns._ID,MediaStore.Files.FileColumns.DISPLAY_NAME,MediaStore.Files.FileColumns.SIZE,MediaStore.Files.FileColumns.DATE_MODIFIED,MediaStore.Files.FileColumns.MIME_TYPE);c.contentResolver.query(u,q,"${MediaStore.Files.FileColumns.SIZE}>0",null,"${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")?.use{x->val id=x.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID);val n=x.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME);val s=x.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE);val d=x.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED);val m=x.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE);while(x.moveToNext()&&out.size<500){val mime=x.getString(m)?:"";val k=when{mime.startsWith("image/")->Category.IMAGE;mime.startsWith("audio/")->Category.AUDIO;mime.startsWith("video/")->Category.VIDEO;mime.contains("pdf")||mime.contains("document")||mime.contains("text")->Category.DOCUMENTS;else->Category.FILES};if(cat==null||cat==k)out+=FoundFile(x.getString(n)?:continue,x.getLong(s),Uri.withAppendedPath(u,x.getLong(id).toString()),k,x.getLong(d))}};out}
 
-private suspend fun queryMedia(context: android.content.Context): List<FoundFile> = withContext(Dispatchers.IO) { val list = mutableListOf<FoundFile>(); val projection = arrayOf(MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.DISPLAY_NAME, MediaStore.Files.FileColumns.SIZE); context.contentResolver.query(MediaStore.Files.getContentUri("external"), projection, "${MediaStore.Files.FileColumns.SIZE} > 0", null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")?.use { c -> val id = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID); val name = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME); val size = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE); while (c.moveToNext() && list.size < 500) { val n = c.getString(name) ?: continue; val s = c.getLong(size); list += FoundFile(n, s, Uri.withAppendedPath(MediaStore.Files.getContentUri("external"), c.getLong(id).toString())) } }; list }
+@Composable private fun Results(files:List<FoundFile>,premium:Boolean,upgrade:()->Unit){var search by remember{mutableStateOf("")};var sort by remember{mutableIntStateOf(0)};var selected by remember{mutableStateOf(setOf<Uri>())};val v=files.filter{it.name.contains(search,true)}.let{when(sort){1->it.sortedByDescending{f->f.size};2->it.sortedByDescending{f->f.modified};else->it.sortedBy{f->f.name.lowercase()}}};LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){item{Text("${v.size} FILES FOUND",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.ExtraBold);OutlinedTextField(search,{search=it},Modifier.fillMaxWidth(),label={Text("SEARCH FILES")},singleLine=true)};item{Row(horizontalArrangement=Arrangement.spacedBy(5.dp)){FilterChip(sort==0,{sort=0},{Text("NAME")});FilterChip(sort==1,{sort=1},{Text("SIZE")});FilterChip(sort==2,{sort=2},{Text("DATE")});TextButton({selected=v.map{it.uri}.toSet()}){Text("SELECT ALL")};TextButton({selected=emptySet()}){Text("CLEAR")}}};items(v){f->Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(16.dp)),elevation=CardDefaults.cardElevation(1.dp)){Row(Modifier.clickable{selected=if(f.uri in selected)selected-f.uri else selected+f.uri}.padding(10.dp),verticalAlignment=Alignment.CenterVertically){Checkbox(f.uri in selected,null);Icon(info(f.category).second,null,Modifier.size(27.dp),tint=info(f.category).third);Spacer(Modifier.width(8.dp));Column(Modifier.weight(1f)){Text(f.name,maxLines=1);Text(bytes(f.size),style=MaterialTheme.typography.bodySmall)};Text("PREVIEW",style=MaterialTheme.typography.labelSmall)}}};item{Button({if(selected.isNotEmpty()&&!premium&&v.any{it.uri in selected&&it.category!=Category.IMAGE})upgrade()else if(!premium)upgrade()},Modifier.fillMaxWidth()){Text(if(premium)"RECOVER SELECTED"else"RECOVER / UPGRADE")}}}}
 
-@Composable private fun ResultsScreen(files: List<FoundFile>, premium: () -> Unit) { LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { item { Text("${files.size} files found", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) }; if (files.isEmpty()) item { Text("No accessible files found.") }; items(files) { f -> Card(Modifier.fillMaxWidth()) { Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.InsertDriveFile, null); Spacer(Modifier.width(10.dp)); Column(Modifier.weight(1f)) { Text(f.name, fontWeight = FontWeight.Medium); Text(formatBytes(f.size), style = MaterialTheme.typography.bodySmall) }; Text("Preview") } } }; item { Spacer(Modifier.height(8.dp)); Button(onClick = premium, modifier = Modifier.fillMaxWidth()) { Text("Upgrade to Premium to recover") } } } }
-@Composable private fun PremiumScreen() { Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Text("Premium", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Text("Recover and save scanned files after purchase."); Text("• Full recovery access\n• Deep scan preview\n• Recovery destinations\n• No recovery limitation") } }
-@Composable private fun HistoryScreen(prefs: android.content.SharedPreferences) { Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { Text("Recovery history", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Text("Scan history will appear here after completed scans.") } }
-@Composable private fun SettingsScreen(dark: Boolean, setDark: (Boolean) -> Unit, theme: Int, setTheme: (Int) -> Unit) { Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) { Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("Dark appearance", Modifier.weight(1f)); Switch(checked = dark, onCheckedChange = setDark) }; Text("Color theme", fontWeight = FontWeight.Bold); Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { themeColors.forEachIndexed { index, color -> Button(onClick = { setTheme(index) }, colors = ButtonDefaults.buttonColors(containerColor = color)) { Text(if (index == theme) "✓" else "Theme ${index + 1}") } } } } }
-private fun formatBytes(bytes: Long): String = when { bytes < 1024 -> "$bytes B"; bytes < 1024 * 1024 -> "${bytes / 1024} KB"; bytes < 1024 * 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"; else -> "${bytes / (1024 * 1024 * 1024)} GB" }
+@Composable private fun Premium(active:Boolean){val rows=listOf("Deep recovery","Audio / video / files","Original file name","Original metadata","Original quality","Recovery destination");LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){item{Text("PREMIUM",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text(if(active)"PREMIUM IS ACTIVE"else"UNLOCK FULL RECOVERY")};item{Card(Modifier.shadow(3.dp,RoundedCornerShape(18.dp)),elevation=CardDefaults.cardElevation(2.dp)){Column(Modifier.padding(12.dp)){Row{Text("FEATURE",Modifier.weight(1f),fontWeight=FontWeight.Bold);Text("FREE",Modifier.width(52.dp),fontWeight=FontWeight.Bold);Text("PREMIUM",Modifier.width(72.dp),fontWeight=FontWeight.Bold)};rows.forEachIndexed{i,r->Row(Modifier.fillMaxWidth().padding(vertical=8.dp)){Icon(if(i==0)Icons.Default.Search else Icons.Default.CheckCircle,null,Modifier.size(20.dp),tint=if(i<1)Color(0xFFE67E22)else Color(0xFF27AE60));Spacer(Modifier.width(6.dp));Text(r,Modifier.weight(1f));Text(if(i==0)"✓"else"—",Modifier.width(52.dp));Text("✓",Modifier.width(72.dp),color=Color(0xFF27AE60))}}}}}}
+@Composable private fun History(p:SharedPreferences){val d=p.getString("last_scan",null);Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){Text("RECOVERY HISTORY",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);if(d==null)Text("NO RECENT SCANS")else Card{Column(Modifier.padding(15.dp)){Text("RECENT SCAN",fontWeight=FontWeight.Bold);Text(d);Text("${p.getInt("last_count",0)} FILES")}}}}
+@Composable private fun Settings(p:SharedPreferences,dark:Boolean,setDark:(Boolean)->Unit,theme:Int,setTheme:(Int)->Unit){var lock by remember{mutableStateOf(p.getBoolean("app_lock",false))};var h by remember{mutableStateOf(p.getBoolean("haptics",true))};var n by remember{mutableStateOf(p.getBoolean("notifications",true))};LazyColumn(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){item{Text("SETTINGS",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold)};item{SW("DARK APPEARANCE",dark,setDark)};item{SW("APP LOCK / BIOMETRIC",lock){lock=it;p.edit().putBoolean("app_lock",it).apply()}};item{SW("HAPTIC FEEDBACK",h){h=it;p.edit().putBoolean("haptics",it).apply()}};item{SW("SCAN NOTIFICATIONS",n){n=it;p.edit().putBoolean("notifications",it).apply()}};item{Text("COLOR THEME",fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp))};item{Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){palettes.forEachIndexed{i,x->Button({setTheme(i)},colors=ButtonDefaults.buttonColors(containerColor=x[0])){Text(if(i==theme)"✓"else"${i+1}")}}}};item{Card{Column(Modifier.padding(14.dp)){Text("PRIVACY & SAFETY",fontWeight=FontWeight.Bold);Text("SCANNING STAYS ON THE DEVICE AND USES ANDROID STORAGE PERMISSIONS.",style=MaterialTheme.typography.bodySmall)}}}}}
+@Composable private fun SW(t:String,v:Boolean,set:(Boolean)->Unit){Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text(t,Modifier.weight(1f),fontWeight=FontWeight.Medium);Switch(v,set)}}
+
+private fun scanNotification(c:Context,on:Boolean){val m=c.getSystemService(Context.NOTIFICATION_SERVICE)as NotificationManager;if(Build.VERSION.SDK_INT>=26)m.createNotificationChannel(NotificationChannel("rss_scan","Recovery Scan",NotificationManager.IMPORTANCE_LOW));if(on){val b=if(Build.VERSION.SDK_INT>=26)android.app.Notification.Builder(c,"rss_scan")else android.app.Notification.Builder(c);b.setSmallIcon(android.R.drawable.stat_sys_download).setContentTitle("SCAN IN PROGRESS").setContentText("RSS Data Recovery is scanning").setOngoing(true);m.notify(991,b.build())}else m.cancel(991)}
+private fun bytes(x:Long)=when{ x<1024->"$x B";x<1048576->"${x/1024} KB";x<1073741824->"${x/1048576} MB";else->"${x/1073741824} GB"}
