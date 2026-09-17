@@ -40,25 +40,10 @@ jobs:
           new_scaffold = 'Scaffold(topBar = { TopAppBar(title = { Text(screen.name.lowercase().replace(\'_\', \' \').replaceFirstChar { it.uppercase() }) }, navigationIcon = { if (screen == RScreen.HOME) IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") } }, actions = { if (screen != RScreen.SETTINGS) IconButton({ go(RScreen.SETTINGS) }) { Icon(Icons.Default.Settings, "Settings") } }) }, bottomBar = { NavigationBar { NavigationBarItem(selected = screen == RScreen.HOME, onClick = { home() }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") }); NavigationBarItem(selected = screen == RScreen.SCAN, onClick = { mode = RMode.QUICK; category = null; go(RScreen.SCAN) }, icon = { Icon(Icons.Default.FlashOn, null) }, label = { Text("Recover") }); NavigationBarItem(selected = screen == RScreen.RESULTS, onClick = { go(RScreen.RESULTS) }, icon = { Icon(Icons.Default.Folder, null) }, label = { Text("Results") }); NavigationBarItem(selected = screen == RScreen.PREMIUM, onClick = { go(RScreen.PREMIUM) }, icon = { Icon(Icons.Default.WorkspacePremium, null) }, label = { Text("Premium") }); NavigationBarItem(selected = screen == RScreen.SETTINGS, onClick = { go(RScreen.SETTINGS) }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") }) } }) { pad ->'
           s = s.replace(old_scaffold, new_scaffold)
           p.write_text(s)
-          r = Path('app/src/main/java/com/riyaz/rssdatarecovery/RegistrationV3.kt')
-          if r.exists():
-              t = r.read_text()
-              # BrandV2 is used from RegistrationV3; expose it from the same package.
-              b = Path('app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt')
-              bt = b.read_text().replace('private fun BrandV2()', 'fun BrandV2()')
-              b.write_text(bt)
           PY
 
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon
-
-      - name: Commit verified source fixes
-        run: |
-          git config user.name 'rss-build-fix-bot'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt app/src/main/java/com/riyaz/rssdatarecovery/RegistrationV3.kt
-          git diff --cached --quiet || git commit -m 'Fix Compose shell and persistent bottom navigation'
-          git push
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -66,3 +51,11 @@ jobs:
           name: rss-data-recovery-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Commit verified source fixes
+        run: |
+          git config user.name 'rss-build-fix-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt
+          git diff --cached --quiet || git commit -m 'Fix Compose shell and persistent bottom navigation'
+          git push
