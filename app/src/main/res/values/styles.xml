@@ -8,6 +8,6 @@
 
     <style name="Theme.RSSDataRecovery.Splash" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowSplashScreenBackground">#111111</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/rss_splash_icon</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/rss_data_recovery_logo</item>
     </style>
 </resources>
