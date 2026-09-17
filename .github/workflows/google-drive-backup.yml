@@ -1,0 +1,25 @@
+name: RSS Google Drive Backup
+on: {push: {branches: ["**"]}, workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Snapshot
+        run: mkdir -p backup && git archive --format=zip --output="backup/${{ github.event.repository.name }}_${{ github.sha }}.zip" "${{ github.sha }}"
+      - name: Install Drive client
+        run: python3 -m pip install --quiet google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
+      - name: Upload
+        env: {GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}, GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}, REPO_NAME: ${{ github.event.repository.name }}, COMMIT_SHA: ${{ github.sha }}}
+        run: |
+          test -n "$GOOGLE_SERVICE_ACCOUNT_JSON" && test -n "$GOOGLE_DRIVE_FOLDER_ID"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"; printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > "$GOOGLE_APPLICATION_CREDENTIALS"
+          python3 - <<'PY'
+          import os
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+          from googleapiclient.http import MediaFileUpload
+          c=service_account.Credentials.from_service_account_file(os.environ['GOOGLE_APPLICATION_CREDENTIALS'],scopes=['https://www.googleapis.com/auth/drive.file']); d=build('drive','v3',credentials=c,cache_discovery=False); r=os.environ['REPO_NAME']; s=os.environ['COMMIT_SHA']; root=os.environ['GOOGLE_DRIVE_FOLDER_ID']; q=f"'{root}' in parents and name = '{r}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"; f=d.files().list(q=q,fields='files(id)').execute().get('files',[]); fid=f[0]['id'] if f else d.files().create(body={'name':r,'mimeType':'application/vnd.google-apps.folder','parents':[root]},fields='id').execute()['id']; p=f"backup/{r}_{s}.zip"; d.files().create(body={'name':os.path.basename(p),'parents':[fid]},media_body=MediaFileUpload(p,mimetype='application/zip'),fields='id').execute(); print('Backup complete')
+          PY
