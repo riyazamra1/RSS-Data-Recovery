@@ -1,0 +1,82 @@
+name: RSS Data Recovery UX Fixes
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ !contains(github.event.head_commit.message, '[ux-fix-bot]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply UX fixes
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('app/src/main/java/com/riyaz/rssdatarecovery/RecoveryUi.kt')
+          s = p.read_text()
+          s = s.replace(
+              'DrawerItem("Premium", Icons.Default.WorkspacePremium, screen == Screen.PREMIUM) { navigate(Screen.PREMIUM); drawerOpen = false }',
+              '''DrawerItem("Premium", Icons.Default.WorkspacePremium, screen == Screen.PREMIUM) { navigate(Screen.PREMIUM); drawerOpen = false }
+              Card(Modifier.padding(horizontal = 12.dp).fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.WorkspacePremium, null, tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(10.dp)); Column(Modifier.weight(1f)) { Text("Premium Upgrade", fontWeight = FontWeight.Bold); Text("Unlock file recovery", style = MaterialTheme.typography.labelSmall) }; Button({ navigate(Screen.PREMIUM); drawerOpen = false }) { Text("Upgrade") } } }''')
+          s = s.replace(
+              'onCategory = { selected -> category = selected; scanMode = ScanMode.QUICK; navigate(Screen.SCAN) }\n                    )',
+              'onCategory = { selected -> category = selected; scanMode = ScanMode.QUICK; navigate(Screen.SCAN) },\n                        onPremium = { navigate(Screen.PREMIUM) }\n                    )')
+          s = s.replace(
+              'private fun HomeScreen(onQuick: () -> Unit, onDeep: () -> Unit, onCategory: (FileCategory) -> Unit) {',
+              'private fun HomeScreen(onQuick: () -> Unit, onDeep: () -> Unit, onCategory: (FileCategory) -> Unit, onPremium: () -> Unit) {')
+          anchor = '''    LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item {
+            Text("Data Recovery"'''
+          intro = '''    val slides = listOf(
+        Triple("Premium Recovery", "Preview recoverable files for free, then unlock saving and recovery with Premium.", Icons.Default.WorkspacePremium),
+        Triple("Recovery Protection", "Safe recovery workflow designed to protect original filenames and available metadata.", Icons.Default.Security),
+        Triple("Deep Recovery", "Full storage scanning helps locate harder-to-find recoverable files.", Icons.Default.Search),
+        Triple("Original File Details", "See filename, type, size and recoverability before recovery.", Icons.Default.Info)
+    )
+    var slide by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(3000); slide = (slide + 1) % slides.size } }
+    val current = slides[slide]
+
+'''
+          if 'val slides = listOf(' not in s:
+              s = s.replace(anchor, intro + anchor)
+          card_anchor = '''        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {'''
+          carousel = '''        item { Card(Modifier.fillMaxWidth().clickable { onPremium() }, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(54.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) { Icon(current.third, null, tint = MaterialTheme.colorScheme.onPrimary) }; Spacer(Modifier.width(14.dp)); Column(Modifier.weight(1f)) { Text(current.first, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(current.second, style = MaterialTheme.typography.bodySmall); Spacer(Modifier.height(6.dp)); Text("Tap to learn more", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) } } } }
+'''
+          if 'Text("Tap to learn more"' not in s:
+              s = s.replace(card_anchor, carousel + card_anchor, 1)
+          upgrade = '''        item { Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) { Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.WorkspacePremium, null, tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text("Unlock Premium", fontWeight = FontWeight.Bold); Text("Recover and save selected files", style = MaterialTheme.typography.bodySmall) }; Button(onClick = onPremium) { Text("Upgrade") } } } }
+'''
+          if 'Text("Unlock Premium"' not in s:
+              s = s.replace('        item { Text("Free scan • Premium recovery"', upgrade + '        item { Text("Free scan • Premium recovery"')
+          p.write_text(s)
+
+          manifest = Path('app/src/main/AndroidManifest.xml')
+          m = manifest.read_text()
+          m = m.replace('android:theme="@style/Theme.RSSDataRecovery"', 'android:theme="@style/Theme.RSSDataRecovery.Splash"')
+          manifest.write_text(m)
+
+          styles = Path('app/src/main/res/values/styles.xml')
+          t = styles.read_text()
+          if 'Theme.RSSDataRecovery.Splash' not in t:
+              t = t.replace('</resources>', '    <style name="Theme.RSSDataRecovery.Splash" parent="android:style/Theme.Material.Light.NoActionBar"><item name="android:windowSplashScreenBackground">#111111</item><item name="android:windowSplashScreenAnimatedIcon">@drawable/rss_splash_icon</item><item name="android:postSplashScreenTheme">@style/Theme.RSSDataRecovery</item></style>\n</resources>')
+          styles.write_text(t)
+
+          d = Path('app/src/main/res/drawable'); d.mkdir(parents=True, exist_ok=True)
+          (d / 'rss_splash_icon.xml').write_text('''<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#D4A72C" android:pathData="M54,4A50,50 0,1 0,54 104A50,50 0,1 0,54 4"/><path android:fillColor="#111111" android:pathData="M29,31h36c8,0 14,6 14,14s-6,14 -14,14H43v18H29zM43,42v7h21c2,0 4,-2 4,-4s-2,-3 -4,-3z"/></vector>''')
+
+      - name: Build verification
+        run: gradle :app:assembleDebug --no-daemon
+      - name: Commit fixes
+        run: |
+          git config user.name 'rss-ux-fix-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/riyaz/rssdatarecovery/RecoveryUi.kt app/src/main/AndroidManifest.xml app/src/main/res/values/styles.xml app/src/main/res/drawable/rss_splash_icon.xml
+          git diff --cached --quiet || (git commit -m 'Fix premium CTA, feature carousel and splash screen [ux-fix-bot]' && git push)
