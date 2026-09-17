@@ -21,113 +21,11 @@ jobs:
           s = p.read_text()
           s = s.replace('RegistrationV2 { name, email ->', 'RegistrationV3 { name, email ->')
           s = s.replace('private fun BrandV2()', 'fun BrandV2()')
-          s = s.replace('RecoveryShellV2(dark, { dark = it; prefs.edit().putBoolean("dark", it).apply() }, theme, { theme = it; prefs.edit().putInt("theme", it).apply() })', 'RecoveryShellV2(dark, { dark = it; prefs.edit().putBoolean("dark", it).apply() })')
-          start = s.index('@OptIn(ExperimentalMaterial3Api::class)\n@Composable private fun RecoveryShellV2')
-          end = s.index('@Composable private fun HomeV2', start)
-          shell = r'''@OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun RecoveryShellV2(dark: Boolean, setDark: (Boolean) -> Unit) {
-    val context = LocalContext.current
-    var screen by remember { mutableStateOf(RScreen.HOME) }
-    var history by remember { mutableStateOf(listOf(RScreen.HOME)) }
-    var menu by remember { mutableStateOf(false) }
-    var mode by remember { mutableStateOf(RMode.QUICK) }
-    var category by remember { mutableStateOf<RCategory?>(null) }
-
-    fun go(to: RScreen) {
-        if (to != screen) {
-            history = history + to
-            screen = to
-        }
-    }
-    fun back() {
-        if (menu) menu = false
-        else if (history.size > 1) {
-            history = history.dropLast(1)
-            screen = history.last()
-        }
-    }
-    fun home() {
-        history = listOf(RScreen.HOME)
-        screen = RScreen.HOME
-    }
-    BackHandler(menu || history.size > 1) { back() }
-
-    val drawer = rememberDrawerState(DrawerValue.Closed)
-    LaunchedEffect(menu) { if (menu) drawer.open() else drawer.close() }
-
-    ModalNavigationDrawer(
-        drawerState = drawer,
-        drawerContent = {
-            ModalDrawerSheet(Modifier.width(315.dp)) {
-                Spacer(Modifier.height(24.dp))
-                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    BrandV2()
-                    Spacer(Modifier.width(12.dp))
-                    Text("RSS Data Recovery", fontWeight = FontWeight.Bold)
-                }
-                DrawerV2("Home", Icons.Default.Home, screen == RScreen.HOME) { home(); menu = false }
-                DrawerV2("Quick Recovery", Icons.Default.FlashOn, false) { mode = RMode.QUICK; category = null; go(RScreen.SCAN); menu = false }
-                DrawerV2("Deep Recovery", Icons.Default.Search, false) { mode = RMode.DEEP; category = null; go(RScreen.SCAN); menu = false }
-                DrawerV2("Recovery Results", Icons.Default.Folder, screen == RScreen.RESULTS) { go(RScreen.RESULTS); menu = false }
-                DrawerV2("Premium", Icons.Default.WorkspacePremium, screen == RScreen.PREMIUM) { go(RScreen.PREMIUM); menu = false }
-                DrawerV2("Settings", Icons.Default.Settings, screen == RScreen.SETTINGS) { go(RScreen.SETTINGS); menu = false }
-                Spacer(Modifier.weight(1f))
-                HorizontalDivider()
-                Column(Modifier.padding(18.dp)) {
-                    Text("RSS Data Recovery", fontWeight = FontWeight.Bold)
-                    Text("Razeen Secure Solution", style = MaterialTheme.typography.labelMedium)
-                    Spacer(Modifier.height(8.dp))
-                    ContactV2(Icons.Default.Phone, "+94 77 115 5504") { dial(context, "+94771155504") }
-                    ContactV2(Icons.Default.Email, "rsscctvsolution@gmail.com") { context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:rsscctvsolution@gmail.com"))) }
-                    ContactV2(Icons.Default.Language, "www.rsscctvsolution.eu.cc") { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc"))) }
-                }
-            }
-        }
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(screen.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }) },
-                    navigationIcon = { IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") } }
-                )
-            },
-            bottomBar = {
-                NavigationBar(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    NavigationBarItem(screen == RScreen.HOME, { home() }, { Icon(Icons.Default.Home, "Home") }, label = { Text("Home") })
-                    NavigationBarItem(screen == RScreen.SCAN, { mode = RMode.QUICK; category = null; go(RScreen.SCAN) }, { Icon(Icons.Default.FlashOn, "Recover") }, label = { Text("Recover") })
-                    NavigationBarItem(screen == RScreen.RESULTS, { go(RScreen.RESULTS) }, { Icon(Icons.Default.Folder, "Results") }, label = { Text("Results") })
-                    NavigationBarItem(screen == RScreen.PREMIUM, { go(RScreen.PREMIUM) }, { Icon(Icons.Default.WorkspacePremium, "Premium") }, label = { Text("Premium") })
-                    NavigationBarItem(screen == RScreen.SETTINGS, { go(RScreen.SETTINGS) }, { Icon(Icons.Default.Settings, "Settings") }, label = { Text("Settings") })
-                }
-            }
-        ) { pad ->
-            Box(Modifier.fillMaxSize().padding(pad)) {
-                when (screen) {
-                    RScreen.HOME -> HomeV2(
-                        { mode = RMode.QUICK; category = null; go(RScreen.SCAN) },
-                        { mode = RMode.DEEP; category = null; go(RScreen.SCAN) },
-                        { category = it; mode = RMode.QUICK; go(RScreen.SCAN) },
-                        { go(RScreen.PREMIUM) }
-                    )
-                    RScreen.SCAN -> ScanV2(mode, category) { go(RScreen.RESULTS) }
-                    RScreen.RESULTS -> ResultsV2 { go(RScreen.PREMIUM) }
-                    RScreen.PREMIUM -> PremiumV2()
-                    RScreen.SETTINGS -> SettingsV2(dark, setDark)
-                }
-            }
-        }
-    }
-}
-
-'''
-          s = s[:start] + shell + s[end:]
+          s = s.replace('ModalNavigationDrawer(\n        drawerState = drawer,\n        drawerContent = {', 'ModalNavigationDrawer(\n        drawerContent = {')
+          s = s.replace('else IconButton({ back() }) { Icon(Icons.Default.ArrowBack, "Back") }', '')
           p.write_text(s)
-
           styles = Path('app/src/main/res/values/styles.xml')
-          t = styles.read_text().replace('<item name="android:postSplashScreenTheme">@style/Theme.RSSDataRecovery</item>\n', '')
-          styles.write_text(t)
+          styles.write_text(styles.read_text().replace('<item name="android:postSplashScreenTheme">@style/Theme.RSSDataRecovery</item>\n', ''))
           PY
       - name: Build verification
         run: gradle :app:assembleDebug --no-daemon
@@ -142,4 +40,4 @@ jobs:
           git config user.name 'rss-ux-fix-bot'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt app/src/main/res/values/styles.xml
-          git diff --cached --quiet || (git commit -m 'Fix persistent bottom navigation and recovery shell [ux-fix-bot]' && git push)
+          git diff --cached --quiet || (git commit -m 'Fix bottom navigation and build [ux-fix-bot]' && git push)
