@@ -1,0 +1,117 @@
+name: RSS Data Recovery Requirements Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build:
+    if: ${{ !contains(github.event.head_commit.message, '[requirements-fix]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply current UX requirements
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt')
+          s = p.read_text()
+
+          # No visible Back arrow: keep Android/device Back navigation through BackHandler.
+          old = '''navigationIcon = { if (screen == RScreen.HOME) IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") } else IconButton({ back() }) { Icon(Icons.Default.ArrowBack, "Back") } }'''
+          new = '''navigationIcon = { if (screen == RScreen.HOME) IconButton({ menu = true }) { Icon(Icons.Default.Menu, "Menu") } }'''
+          if old in s:
+              s = s.replace(old, new, 1)
+
+          # Replace the legacy registration card with a modern animated welcome form.
+          start = s.find('@Composable private fun RegistrationV2')
+          end = s.find('\n@OptIn(ExperimentalMaterial3Api::class)', start)
+          if start >= 0 and end > start:
+              modern = r'''@Composable private fun RegistrationV2(done: (String, String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "registration")
+    val drift by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(6500),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "registrationDrift"
+    )
+    Box(Modifier.fillMaxSize().background(Color(0xFF070707))) {
+        Box(Modifier.fillMaxSize().background(
+            androidx.compose.ui.graphics.Brush.radialGradient(
+                colors = listOf(Color(0xFFFFC83D).copy(alpha = 0.25f), Color.Transparent),
+                center = androidx.compose.ui.geometry.Offset(180f + drift * 460f, 120f),
+                radius = 620f
+            )
+        ))
+        Box(Modifier.fillMaxSize().background(
+            androidx.compose.ui.graphics.Brush.radialGradient(
+                colors = listOf(Color(0xFF6B4A00).copy(alpha = 0.24f), Color.Transparent),
+                center = androidx.compose.ui.geometry.Offset(760f - drift * 400f, 1120f),
+                radius = 520f
+            )
+        ))
+        LazyColumn(
+            Modifier.fillMaxSize().padding(horizontal = 22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            item {
+                Box(Modifier.fillMaxWidth().padding(vertical = 20.dp)) {
+                    Card(
+                        Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(30.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.075f))
+                    ) {
+                        Column(Modifier.padding(26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(Modifier.size(82.dp).clip(CircleShape).background(Color(0xFF1A1408)), Alignment.Center) { BrandV2() }
+                            Spacer(Modifier.height(20.dp))
+                            Text("Welcome to RSS Data Recovery", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Create your recovery profile", color = Color.White.copy(alpha = 0.65f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Spacer(Modifier.height(24.dp))
+                            OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Full name") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Color.White.copy(alpha = 0.25f), focusedBorderColor = Color(0xFFFFC83D), unfocusedLabelColor = Color.White.copy(alpha = 0.55f), focusedLabelColor = Color(0xFFFFC83D), unfocusedTextColor = Color.White, focusedTextColor = Color.White))
+                            Spacer(Modifier.height(12.dp))
+                            OutlinedTextField(email, { email = it }, Modifier.fillMaxWidth(), label = { Text("Email address") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Color.White.copy(alpha = 0.25f), focusedBorderColor = Color(0xFFFFC83D), unfocusedLabelColor = Color.White.copy(alpha = 0.55f), focusedLabelColor = Color(0xFFFFC83D), unfocusedTextColor = Color.White, focusedTextColor = Color.White))
+                            Spacer(Modifier.height(20.dp))
+                            Button({ done(name.trim(), email.trim()) }, Modifier.fillMaxWidth().height(54.dp), enabled = name.trim().length > 1 && email.contains("@"), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC83D), contentColor = Color(0xFF191300))) {
+                                Text("Continue", fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.width(8.dp))
+                                Icon(Icons.Default.ArrowForward, null)
+                            }
+                            Spacer(Modifier.height(14.dp))
+                            Text("Your details are used to create your RSS customer profile.", color = Color.White.copy(alpha = 0.42f), style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+'''
+              s = s[:start] + modern + s[end:]
+
+          p.write_text(s)
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --no-daemon
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rss-data-recovery-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+      - name: Commit UX requirements
+        run: |
+          git config user.name 'rss-requirements-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/riyaz/rssdatarecovery/RecoveryAppV2.kt
+          git diff --cached --quiet || (git commit -m 'Apply current RSS Data Recovery UX requirements [requirements-fix]' && git push)
