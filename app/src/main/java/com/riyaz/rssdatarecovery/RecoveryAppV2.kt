@@ -58,11 +58,23 @@ fun RecoveryAppV2() {
 }
 
 @Composable private fun HomeV2(quick: () -> Unit, deep: () -> Unit, category: (RCategory) -> Unit, premium: () -> Unit) {
-    val slides = listOf(Triple("Premium Recovery", "Free users can scan and preview. Premium unlocks saving recovered files.", Icons.Default.WorkspacePremium), Triple("Recovery Protection", "Protected workflow for original filenames and available metadata.", Icons.Default.Security), Triple("Deep Recovery", "Full storage scan for harder-to-find recoverable files.", Icons.Default.Search), Triple("Recovery Details", "See file type, size and recoverability before recovery.", Icons.Default.Info))
+    val slides = listOf(
+        Triple("Premium Recovery", "Free users can scan and preview. Premium unlocks saving recovered files.", Icons.Default.WorkspacePremium),
+        Triple("Recovery Protection", "Protected workflow for original filenames and available metadata.", Icons.Default.Security),
+        Triple("Deep Recovery", "Full storage scan for harder-to-find recoverable files.", Icons.Default.Search),
+        Triple("Recovery Details", "See file type, size and recoverability before recovery.", Icons.Default.Info),
+        Triple("RSS CLOUD SYNC", "RSS cloud synchronization and backup project.", Icons.Default.CloudSync),
+        Triple("RSS Ai Assistant", "RSS Android AI assistant project.", Icons.Default.AutoAwesome),
+        Triple("RSS INVOICE MAKER", "Sales representative order and invoice workflow.", Icons.Default.ReceiptLong),
+        Triple("RSS MONEY MANAGER", "Personal finance and wallet management project.", Icons.Default.AccountBalanceWallet),
+        Triple("RSS LAUNCHER", "Custom Android launcher and productivity project.", Icons.Default.Launch),
+        Triple("RSS DEVICE GUARDIAN", "Device protection, privacy and optimization project.", Icons.Default.Security),
+        Triple("RSS CLIPBOARD", "Lightweight clipboard and cloud backup project.", Icons.Default.ContentPaste)
+    )
     var index by remember { mutableIntStateOf(0) }; LaunchedEffect(Unit) { while (true) { delay(3000); index = (index + 1) % slides.size } }; val s = slides[index]
     LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text("Data Recovery", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Text("Choose how you want to recover your files.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        item { Card(Modifier.fillMaxWidth().clickable { premium() }, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), Alignment.Center) { Icon(s.third, null, tint = MaterialTheme.colorScheme.onPrimary) }; Spacer(Modifier.width(14.dp)); Column { Text(s.first, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(s.second, style = MaterialTheme.typography.bodySmall); Spacer(Modifier.height(5.dp)); Text("Premium features • changing every 3 seconds", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) } } } }
+        item { Card(Modifier.fillMaxWidth().clickable { premium() }, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), Alignment.Center) { Icon(s.third, null, tint = MaterialTheme.colorScheme.onPrimary) }; Spacer(Modifier.width(14.dp)); Column { Text(s.first, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(s.second, style = MaterialTheme.typography.bodySmall); Spacer(Modifier.height(5.dp)); Text("RSS PROJECTS • changing every 3 seconds", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) } } } }
         item { Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { ModeCardV2(RMode.QUICK, Icons.Default.FlashOn, quick, Modifier.weight(1f)); ModeCardV2(RMode.DEEP, Icons.Default.Search, deep, Modifier.weight(1f)) } }
         item { Text("Recover by category", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
         items(RCategory.values().toList()) { c -> Card(Modifier.fillMaxWidth().clickable { category(c) }, shape = RoundedCornerShape(20.dp)) { Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) { Icon(c.icon, null, tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(14.dp)); Text(c.title, Modifier.weight(1f), fontWeight = FontWeight.Bold); Icon(Icons.Default.ChevronRight, null) } } }
@@ -73,7 +85,50 @@ fun RecoveryAppV2() {
 @Composable private fun ModeCardV2(mode: RMode, icon: ImageVector, click: () -> Unit, modifier: Modifier) { Card(modifier.clickable { click() }, shape = RoundedCornerShape(22.dp)) { Column(Modifier.padding(17.dp)) { Icon(icon, null, tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.height(9.dp)); Text(mode.title, fontWeight = FontWeight.Bold); Text(mode.subtitle, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall); Text(if (mode == RMode.QUICK) "Fast normal scan" else "Full storage scan", style = MaterialTheme.typography.bodySmall) } } }
 @Composable private fun ScanV2(mode: RMode, category: RCategory?, results: () -> Unit) { Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) { Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Column(Modifier.padding(22.dp)) { Text(mode.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text(mode.subtitle); Spacer(Modifier.height(10.dp)); Text(if (mode == RMode.QUICK) "Normal scan" else "Full scan" ); if (category != null) Text("Category: ${category.title}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) } }; Text("Free users can scan and preview recoverable files. Premium is required only to save/recover selected files.", style = MaterialTheme.typography.bodySmall); Spacer(Modifier.weight(1f)); Button(results, Modifier.fillMaxWidth().height(54.dp)) { Text("Start ${mode.title}") } } }
 @Composable private fun ResultsV2(upgrade: () -> Unit) { LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { item { Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Recoverable files", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("Preview is free") }; Button(upgrade) { Text("Upgrade") } } }; items(listOf("IMG_20260814_183201.jpg", "VID_20260729_221045.mp4", "document_2026.pdf")) { n -> Card(shape = RoundedCornerShape(18.dp)) { Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.InsertDriveFile, null); Spacer(Modifier.width(10.dp)); Text(n, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis); Button(upgrade) { Text("Recover") } } } } } }
-@Composable private fun PremiumV2() { LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) { item { Card(shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Column(Modifier.padding(24.dp)) { Icon(Icons.Default.WorkspacePremium, null, Modifier.size(44.dp)); Text("Premium Recovery", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("Unlock actual file recovery and saving."); Spacer(Modifier.height(16.dp)); Button({}, Modifier.fillMaxWidth().height(52.dp)) { Text("Upgrade to Premium") } } } }; item { FeatureV2(Icons.Default.Security, "Recovery Protection", "Protected recovery workflow and duplicate-safe handling.") }; item { FeatureV2(Icons.Default.Folder, "Original filenames", "Keep original filenames whenever technically recoverable.") }; item { FeatureV2(Icons.Default.DataObject, "Metadata preservation", "Preserve available original metadata.") }; item { FeatureV2(Icons.Default.Save, "Save recovered files", "Save recovered files into the RSS Data Recovery folder.") } } }
+
+@Composable private fun PremiumV2() {
+    LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
+        item { Card(shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Column(Modifier.padding(24.dp)) { Icon(Icons.Default.WorkspacePremium, null, Modifier.size(44.dp)); Text("Premium Recovery", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("Unlock actual file recovery and saving."); Spacer(Modifier.height(16.dp)); Button({}, Modifier.fillMaxWidth().height(52.dp)) { Text("Upgrade to Premium") } } } }
+        item { Text("Free vs Premium", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
+        item { PremiumCompareTableV2() }
+        item { FeatureV2(Icons.Default.Security, "Recovery Protection", "Protected recovery workflow and duplicate-safe handling.") }
+        item { FeatureV2(Icons.Default.Folder, "Original filenames", "Keep original filenames whenever technically recoverable.") }
+        item { FeatureV2(Icons.Default.DataObject, "Metadata preservation", "Preserve available original metadata.") }
+        item { FeatureV2(Icons.Default.Save, "Save recovered files", "Save recovered files into the RSS Data Recovery folder.") }
+    }
+}
+
+@Composable private fun PremiumCompareTableV2() {
+    val rows = listOf(
+        "Quick Recovery scan" to Pair("✓", "✓"),
+        "Deep Recovery scan" to Pair("✓", "✓"),
+        "Preview recoverable files" to Pair("✓", "✓"),
+        "File type / size details" to Pair("✓", "✓"),
+        "Recover & save files" to Pair("—", "✓"),
+        "Original filenames" to Pair("Preview", "✓"),
+        "Metadata preservation" to Pair("Preview", "✓"),
+        "Recovery Protection" to Pair("Basic", "Full"),
+        "RSS Data Recovery folder" to Pair("—", "✓")
+    )
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+        Column {
+            Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primaryContainer).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("FEATURE", Modifier.weight(1.55f), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                Text("FREE", Modifier.weight(0.7f), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                Text("PREMIUM", Modifier.weight(0.85f), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            rows.forEachIndexed { i, (feature, values) ->
+                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(feature, Modifier.weight(1.55f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                    Text(values.first, Modifier.weight(0.7f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    Text(values.second, Modifier.weight(0.85f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+                if (i != rows.lastIndex) HorizontalDivider()
+            }
+        }
+    }
+}
+
 @Composable private fun FeatureV2(icon: ImageVector, title: String, text: String) { Row(verticalAlignment = Alignment.Top) { Icon(icon, null, tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(12.dp)); Column { Text(title, fontWeight = FontWeight.Bold); Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } } }
 @Composable private fun SettingsV2(dark: Boolean, setDark: (Boolean) -> Unit) { Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) { Text("Appearance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Row(verticalAlignment = Alignment.CenterVertically) { Text("Light | Dark", Modifier.weight(1f)); SegmentedButtonRowV2(dark, setDark) }; Text("Appearance is independent from app color themes.", style = MaterialTheme.typography.bodySmall) } }
 @Composable private fun SegmentedButtonRowV2(dark: Boolean, setDark: (Boolean) -> Unit) { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { FilterChip(!dark, { setDark(false) }, label = { Text("Light") }); FilterChip(dark, { setDark(true) }, label = { Text("Dark") }) } }
