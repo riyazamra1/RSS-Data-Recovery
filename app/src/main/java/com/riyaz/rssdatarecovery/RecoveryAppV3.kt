@@ -52,6 +52,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
+import java.security.MessageDigest
 import java.util.Date
 
 private enum class Page { HOME, SCAN, RESULTS, PREMIUM, SETTINGS, HISTORY }
@@ -61,7 +62,7 @@ private data class FoundFile(val name: String, val size: Long, val uri: Uri, val
 private val palettes = listOf(listOf(Color(0xFFB7791F), Color(0xFFF6D365)), listOf(Color(0xFF1677FF), Color(0xFF67D5FF)), listOf(Color(0xFF0E9F6E), Color(0xFF65D6A6)), listOf(Color(0xFF8B5CF6), Color(0xFFE0B7FF)))
 
 @Composable
-fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}) {
+fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onForgotPin: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("rss_recovery", Context.MODE_PRIVATE) }
     var registered by remember { mutableStateOf(prefs.getBoolean("registered", false)) }
@@ -72,7 +73,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}) {
     val scheme = if (dark) darkColorScheme(primary = palette[0], secondary = palette[1]) else lightColorScheme(primary = palette[0], secondary = palette[1])
     MaterialTheme(colorScheme = scheme) {
         if (appLocked) {
-            LockScreen(onUnlock)
+            LockScreen(onUnlock, onForgotPin)
             return@MaterialTheme
         }
         AnimatedContent(targetState = registered to welcomed, transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "entry") { state ->
@@ -91,7 +92,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}) {
     Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF07111F), Color(0xFF17304A), Color(0xFF090D16)), start = androidx.compose.ui.geometry.Offset(x * 900f, 0f), end = androidx.compose.ui.geometry.Offset(0f, 1500f))))
 }
 
-@Composable private fun LockScreen(onUnlock: () -> Unit) {
+@Composable private fun LockScreen(onUnlock: () -> Unit, onForgotPin: () -> Unit) {
     Box(Modifier.fillMaxSize()) {
         AnimatedBackdrop()
         Card(Modifier.fillMaxWidth().padding(24.dp).align(Alignment.Center), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.14f)), elevation = CardDefaults.cardElevation(12.dp)) {
@@ -105,6 +106,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}) {
                     Spacer(Modifier.width(8.dp))
                     Text("UNLOCK")
                 }
+                TextButton(onClick = onForgotPin) { Text("FORGOT PIN?") }
             }
         }
     }
@@ -334,7 +336,7 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
 
 @Composable private fun SettingsScreen(prefs: SharedPreferences, dark: Boolean, onDarkChange: (Boolean) -> Unit, theme: Int, onThemeChange: (Int) -> Unit) {
     var lock by remember { mutableStateOf(prefs.getBoolean("app_lock", false)) }; var haptics by remember { mutableStateOf(prefs.getBoolean("haptics", true)) }; var notifications by remember { mutableStateOf(prefs.getBoolean("notifications", true)) }
-    LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { item { Text("SETTINGS", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold) }; item { SettingSwitch("DARK APPEARANCE", dark, onDarkChange) }; item { SettingSwitch("APP LOCK / BIOMETRIC", lock) { lock = it; prefs.edit().putBoolean("app_lock", it).apply() } }; item { SettingSwitch("HAPTIC FEEDBACK", haptics) { haptics = it; prefs.edit().putBoolean("haptics", it).apply() } }; item { SettingSwitch("SCAN NOTIFICATIONS", notifications) { notifications = it; prefs.edit().putBoolean("notifications", it).apply() } }; item { Text("COLOR THEME", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp)) }; item { Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) { palettes.forEachIndexed { index, colors -> Button(onClick = { onThemeChange(index) }, colors = ButtonDefaults.buttonColors(containerColor = colors[0])) { Text(if (index == theme) "✓" else "${index + 1}") } } } }; item { Card(Modifier.shadow(2.dp, RoundedCornerShape(16.dp))) { Column(Modifier.padding(14.dp)) { Text("PRIVACY & SAFETY", fontWeight = FontWeight.Bold); Text("SCANNING STAYS ON THE DEVICE AND USES ANDROID STORAGE PERMISSIONS.", style = MaterialTheme.typography.bodySmall) } } } }
+    LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { item { Text("SETTINGS", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold) }; item { SettingSwitch("DARK APPEARANCE", dark, onDarkChange) }; item { SettingSwitch("APP LOCK / BIOMETRIC", lock) { lock = it; prefs.edit().putBoolean("app_lock", it).apply() } }; item { Button(onClick = { prefs.edit().putBoolean("pin_enabled", true).apply() }, modifier = Modifier.fillMaxWidth()) { Text(if (prefs.getBoolean("pin_enabled", false)) "CHANGE APP PIN" else "SET APP PIN") } }; item { SettingSwitch("HAPTIC FEEDBACK", haptics) { haptics = it; prefs.edit().putBoolean("haptics", it).apply() } }; item { SettingSwitch("SCAN NOTIFICATIONS", notifications) { notifications = it; prefs.edit().putBoolean("notifications", it).apply() } }; item { Text("COLOR THEME", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp)) }; item { Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) { palettes.forEachIndexed { index, colors -> Button(onClick = { onThemeChange(index) }, colors = ButtonDefaults.buttonColors(containerColor = colors[0])) { Text(if (index == theme) "✓" else "${index + 1}") } } } }; item { Card(Modifier.shadow(2.dp, RoundedCornerShape(16.dp))) { Column(Modifier.padding(14.dp)) { Text("PRIVACY & SAFETY", fontWeight = FontWeight.Bold); Text("SCANNING STAYS ON THE DEVICE AND USES ANDROID STORAGE PERMISSIONS.", style = MaterialTheme.typography.bodySmall) } } } }
 }
 
 @Composable private fun SettingSwitch(title: String, value: Boolean, onChange: (Boolean) -> Unit) { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text(title, Modifier.weight(1f), fontWeight = FontWeight.Medium); Switch(checked = value, onCheckedChange = onChange) } }
