@@ -550,7 +550,9 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
 
 @Composable private fun SettingSwitch(title: String, value: Boolean, onChange: (Boolean) -> Unit) { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text(title, Modifier.weight(1f), fontWeight = FontWeight.Medium); Switch(checked = value, onCheckedChange = onChange) } }
 
-private fun hashPin(pin: String): String = MessageDigest.getInstance("SHA-256").digest(pin.toByteArray()).joinToString("") { it.toString(16).padStart(2, '0') }\n\nprivate fun scanNotification(context: Context, active: Boolean) {
+private fun hashPin(pin: String): String = MessageDigest.getInstance("SHA-256").digest(pin.toByteArray()).joinToString("") { it.toString(16).padStart(2, '0') }
+
+private fun scanNotification(context: Context, active: Boolean) {
     val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(NotificationChannel("rss_scan", "Recovery Scan", NotificationManager.IMPORTANCE_LOW))
     if (active) { val builder = if (Build.VERSION.SDK_INT >= 26) android.app.Notification.Builder(context, "rss_scan") else android.app.Notification.Builder(context); builder.setSmallIcon(android.R.drawable.stat_sys_download).setContentTitle("SCAN IN PROGRESS").setContentText("RSS Data Recovery is scanning").setOngoing(true); manager.notify(991, builder.build()) } else manager.cancel(991)
