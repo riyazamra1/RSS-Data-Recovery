@@ -262,9 +262,11 @@ private fun pageTitle(page: Page, mode: Mode): String = when (page) {
 }
 
 @Composable private fun HomeScreen(quick: () -> Unit, deep: () -> Unit, history: () -> Unit, onCategory: (Category) -> Unit) {
+    val context = LocalContext.current
+    val storage = remember { storageUsage(context) }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
         item { Text("RECOVER YOUR FILES", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold); Text("SCAN, PREVIEW AND RECOVER SAFELY", style = MaterialTheme.typography.bodySmall) }
-        item { Card(Modifier.shadow(3.dp, RoundedCornerShape(18.dp)), elevation = CardDefaults.cardElevation(2.dp)) { Column(Modifier.padding(14.dp)) { Text("STORAGE", fontWeight = FontWeight.Bold); Text("READY TO SCAN", style = MaterialTheme.typography.bodySmall); Spacer(Modifier.height(7.dp)); LinearProgressIndicator(progress = { .62f }, modifier = Modifier.fillMaxWidth()) } } }
+        item { Card(Modifier.shadow(3.dp, RoundedCornerShape(18.dp)), elevation = CardDefaults.cardElevation(2.dp)) { Column(Modifier.padding(14.dp)) { Text("STORAGE", fontWeight = FontWeight.Bold); Text("${storage.first} USED • ${storage.second} FREE", style = MaterialTheme.typography.bodySmall); Spacer(Modifier.height(7.dp)); LinearProgressIndicator(progress = { storage.third }, modifier = Modifier.fillMaxWidth()) } } }
         item { Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) { ActionCard("Quick Recovery", Icons.Default.FlashOn, Color(0xFFE67E22), quick, Modifier.weight(1f)); ActionCard("Deep Recovery", Icons.Default.Search, Color(0xFF8E44AD), deep, Modifier.weight(1f)) } }
         item { Text("RECOVERY BY CATEGORY", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold) }
         item { LazyVerticalGrid(GridCells.Fixed(2), Modifier.height(295.dp), verticalArrangement = Arrangement.spacedBy(9.dp), horizontalArrangement = Arrangement.spacedBy(9.dp), userScrollEnabled = false) { items(Category.values().toList()) { item -> val info = categoryInfo(item); ActionCard(info.first, info.second, info.third, { onCategory(item) }, Modifier.fillMaxWidth()) } } }
@@ -352,6 +354,14 @@ private fun hashPin(pin: String): String = MessageDigest.getInstance("SHA-256").
     if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(NotificationChannel("rss_scan", "Recovery Scan", NotificationManager.IMPORTANCE_LOW))
     if (active) { val builder = if (Build.VERSION.SDK_INT >= 26) android.app.Notification.Builder(context, "rss_scan") else android.app.Notification.Builder(context); builder.setSmallIcon(android.R.drawable.stat_sys_download).setContentTitle("SCAN IN PROGRESS").setContentText("RSS Data Recovery is scanning").setOngoing(true); manager.notify(991, builder.build()) } else manager.cancel(991)
 }
+private fun storageUsage(context: Context): Triple<String, String, Float> {
+    val stat = android.os.StatFs(context.filesDir.absolutePath)
+    val total = stat.totalBytes.coerceAtLeast(1L)
+    val free = stat.availableBytes.coerceIn(0L, total)
+    val used = total - free
+    return Triple(formatBytes(used), formatBytes(free), used.toFloat() / total.toFloat())
+}
+
 private fun formatBytes(value: Long): String = when { value < 1024 -> "$value B"; value < 1048576 -> "${value / 1024} KB"; value < 1073741824 -> "${value / 1048576} MB"; else -> "${value / 1073741824} GB" }
 
 private suspend fun registerRecoveryCustomer(name: String, email: String) = withContext(Dispatchers.IO) {
