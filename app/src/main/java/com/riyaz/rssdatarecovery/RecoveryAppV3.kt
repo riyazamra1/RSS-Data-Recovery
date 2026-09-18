@@ -145,13 +145,20 @@ fun RecoveryAppV3() {
     val name = prefs.getString("name", "USER") ?: "USER"
     val email = prefs.getString("email", "") ?: ""
     fun navigate(target: Page) { page = target; drawerOpen = false }
-    BackHandler(enabled = drawerOpen) { drawerOpen = false }
+    BackHandler {
+        when {
+            drawerOpen -> drawerOpen = false
+            page != Page.HOME -> page = Page.HOME
+        }
+    }
     val drawerState = rememberDrawerState(if (drawerOpen) DrawerValue.Open else DrawerValue.Closed)
     LaunchedEffect(drawerOpen) { if (drawerOpen) drawerState.open() else drawerState.close() }
     LaunchedEffect(scanning) {
         if (scanning) {
-            if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-            if (prefs.getBoolean("notifications", true)) scanNotification(context, true)
+            if (prefs.getBoolean("notifications", true)) {
+                if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                scanNotification(context, true)
+            }
         } else scanNotification(context, false)
     }
     ModalNavigationDrawer(drawerState = drawerState, drawerContent = {
