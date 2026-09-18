@@ -14,6 +14,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -71,7 +74,13 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
     var theme by remember { mutableIntStateOf(prefs.getInt("theme", 0).coerceIn(0, 3)) }
     val palette = palettes[theme]
     val scope = rememberCoroutineScope()
-    val scheme = if (dark) darkColorScheme(primary = palette[0], secondary = palette[1]) else lightColorScheme(primary = palette[0], secondary = palette[1])
+    val scheme = if (dark) darkColorScheme(primary = palette[0], secondary = palette[1]) else lightColorScheme(
+        primary = palette[0],
+        secondary = palette[1],
+        background = Color.White,
+        surface = Color.White,
+        surfaceVariant = Color(0xFFF5F6F8)
+    )
     MaterialTheme(colorScheme = scheme) {
         if (appLocked) {
             LockScreen(prefs, onUnlock, onPinUnlock, onForgotPin)
@@ -121,21 +130,63 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 @Composable private fun RegistrationScreen(done: (String, String) -> Unit) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var visible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { delay(120); visible = true }
+
     Box(Modifier.fillMaxSize()) {
         AnimatedBackdrop()
-        Card(Modifier.fillMaxWidth().padding(22.dp).align(Alignment.Center), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .13f)), elevation = CardDefaults.cardElevation(12.dp)) {
-            Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Icon(Icons.Default.Security, null, Modifier.size(52.dp).align(Alignment.CenterHorizontally), tint = Color(0xFFFFD166))
-                Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-                androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
-                    contentDescription = "RSS Data Recovery",
-                    modifier = Modifier.size(78.dp)
-                )
-                Text("CREATE YOUR PROFILE", color = Color.White, fontWeight = FontWeight.Bold)
-                OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), label = { Text("FULL NAME", color = Color.White) }, singleLine = true, textStyle = LocalTextStyle.current.copy(color = Color.White), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
-                OutlinedTextField(value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(), label = { Text("EMAIL ADDRESS", color = Color.White) }, singleLine = true, textStyle = LocalTextStyle.current.copy(color = Color.White), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
-                Button(onClick = { done(name.trim(), email.trim()) }, modifier = Modifier.fillMaxWidth(), enabled = name.trim().length > 1 && email.contains("@")) { Text("CONTINUE") }
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(450)) +
+                scaleIn(initialScale = 0.94f, animationSpec = tween(500)) +
+                slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(500))
+        ) {
+            Card(
+                Modifier.fillMaxWidth().padding(22.dp).align(Alignment.Center).shadow(3.dp, RoundedCornerShape(30.dp)),
+                shape = RoundedCornerShape(30.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .13f)),
+                elevation = CardDefaults.cardElevation(3.dp)
+            ) {
+                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(tween(550)) + scaleIn(initialScale = .75f, animationSpec = tween(550))
+                    ) {
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
+                            contentDescription = "RSS Data Recovery",
+                            modifier = Modifier.size(78.dp).align(Alignment.CenterHorizontally)
+                        )
+                    }
+                    Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                    Text("CREATE YOUR PROFILE", color = Color.White, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("FULL NAME", color = Color.White) },
+                        leadingIcon = { Icon(Icons.Default.Person, null, tint = Color.White) },
+                        singleLine = true,
+                        textStyle = LocalTextStyle.current.copy(color = Color.White),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                    )
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("EMAIL ADDRESS", color = Color.White) },
+                        leadingIcon = { Icon(Icons.Default.Email, null, tint = Color.White) },
+                        singleLine = true,
+                        textStyle = LocalTextStyle.current.copy(color = Color.White),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+                    )
+                    Button(
+                        onClick = { done(name.trim(), email.trim()) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = name.trim().length > 1 && email.contains("@")
+                    ) { Text("CONTINUE") }
+                }
             }
         }
     }
@@ -458,11 +509,11 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                     .padding(padding)
                     .fillMaxSize()
                     .background(
-                        Brush.linearGradient(
+                        if (!dark) Color.White else Brush.linearGradient(
                             listOf(
                                 MaterialTheme.colorScheme.surface,
-                                palette[1].copy(alpha = if (dark) .08f else .12f),
-                                palette[0].copy(alpha = if (dark) .05f else .08f)
+                                palette[1].copy(alpha = .08f),
+                                palette[0].copy(alpha = .05f)
                             )
                         )
                     )
@@ -616,7 +667,22 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
 }
 
 @Composable private fun ActionCard(title: String, icon: ImageVector, tint: Color, onClick: () -> Unit, modifier: Modifier) {
-    Card(modifier.clickable(onClick = onClick).shadow(3.dp, RoundedCornerShape(17.dp)), shape = RoundedCornerShape(17.dp), elevation = CardDefaults.cardElevation(2.dp)) { Column(Modifier.padding(13.dp)) { Icon(icon, null, Modifier.size(30.dp), tint = tint); Spacer(Modifier.height(6.dp)); Text(title, fontWeight = FontWeight.Bold) } }
+    Card(
+        modifier = modifier.clickable(onClick = onClick).shadow(2.dp, RoundedCornerShape(17.dp)),
+        shape = RoundedCornerShape(17.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(1.dp)
+    ) {
+        Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(42.dp).background(tint.copy(alpha = .12f), RoundedCornerShape(13.dp)),
+                contentAlignment = Alignment.Center
+            ) { Icon(icon, null, Modifier.size(24.dp), tint = tint) }
+            Spacer(Modifier.width(11.dp))
+            Text(title, Modifier.weight(1f), fontWeight = FontWeight.Bold)
+            Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }
 
 @Composable private fun ScanScreen(mode: Mode, category: Category?, scanning: Boolean, progress: Float, count: Int, setProgress: (Float) -> Unit, setScanning: (Boolean) -> Unit, done: (List<FoundFile>) -> Unit, scope: kotlinx.coroutines.CoroutineScope, prefs: SharedPreferences) {
