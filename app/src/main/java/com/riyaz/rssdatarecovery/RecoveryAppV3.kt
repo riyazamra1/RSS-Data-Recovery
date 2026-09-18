@@ -512,7 +512,33 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
 
 @Composable private fun HistoryScreen(prefs: SharedPreferences) {
     val lastScan = prefs.getString("last_scan", null)
-    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { Text("RECOVERY HISTORY", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold); if (lastScan == null) Text("NO RECENT SCANS") else Card(Modifier.shadow(2.dp, RoundedCornerShape(16.dp))) { Column(Modifier.padding(15.dp)) { Text("RECENT SCAN", fontWeight = FontWeight.Bold); Text(lastScan); Text("${prefs.getInt("last_count", 0)} FILES") } } }
+    val recoveryHistory = prefs.getString("recovery_history", "").orEmpty()
+    LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item { Text("RECOVERY HISTORY", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold) }
+        item {
+            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp))) {
+                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("RECENT SCAN", fontWeight = FontWeight.Bold)
+                    if (lastScan == null) Text("NO RECENT SCANS") else {
+                        Text(lastScan)
+                        Text("${prefs.getInt("last_count", 0)} FILES")
+                    }
+                }
+            }
+        }
+        item { Text("RECOVERY ACTIVITY", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+        if (recoveryHistory.isBlank()) {
+            item { Text("NO RECOVERY ACTIVITY YET") }
+        } else {
+            recoveryHistory.lineSequence().filter { it.isNotBlank() }.forEach { entry ->
+                item {
+                    Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp))) {
+                        Text(entry, Modifier.padding(14.dp))
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable private fun SettingsScreen(prefs: SharedPreferences, dark: Boolean, onDarkChange: (Boolean) -> Unit, theme: Int, onThemeChange: (Int) -> Unit) {
