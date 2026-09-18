@@ -296,44 +296,41 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                             radius = 26.dp,
                             alpha = if (dark) 0.14f else 0.52f
                         ) {
-                            Row(
-                                Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 18.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 androidx.compose.foundation.Image(
-                                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
-                                    contentDescription = "RSS Data Recovery",
-                                    modifier = Modifier
-                                        .size(62.dp)
-                                        .shadow(8.dp, RoundedCornerShape(18.dp))
+                                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),
+                                    contentDescription = "Razeen Secure Solution",
+                                    modifier = Modifier.size(78.dp)
                                 )
-                                Spacer(Modifier.width(13.dp))
-                                Column(Modifier.weight(1f)) {
+                                Spacer(Modifier.height(10.dp))
+                                Text(
+                                    "WELCOME BACK",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    name,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1
+                                )
+                                if (email.isNotBlank()) {
                                     Text(
-                                        "WELCOME BACK",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
+                                        email,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Spacer(Modifier.height(2.dp))
-                                    Text(
-                                        name,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        maxLines = 1
-                                    )
-                                    if (email.isNotBlank()) {
-                                        Text(
-                                            email,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            maxLines = 1,
-                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
                                 }
                             }
-                        }
 
                         Spacer(Modifier.height(18.dp))
                         Text(
@@ -379,8 +376,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 
                         Spacer(Modifier.weight(1f))
 
-                        // Bottom RSS branding block. The existing project logo is kept unchanged;
-                        // no replacement/generated logo is introduced.
+                        // Bottom RSS branding uses the original transparent company logo.
                         GlassPanel(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -400,20 +396,24 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 androidx.compose.foundation.Image(
-                                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
-                                    contentDescription = "RSS Data Recovery",
-                                    modifier = Modifier.size(46.dp)
+                                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),
+                                    contentDescription = "Razeen Secure Solution",
+                                    modifier = Modifier.size(52.dp)
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text("RSS", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
                                     Text(
-                                        "Razeen Secure Solution",
+                                        "RAZEEN SECURE SOLUTION",
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        "Mobile & PC Software • CCTV • Networking",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
-                                        "rsscctvsolution.eu.cc",
+                                        "www.rsscctvsolution.eu.cc",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -963,8 +963,112 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
 }
 
 @Composable private fun SettingsScreen(prefs: SharedPreferences, dark: Boolean, onDarkChange: (Boolean) -> Unit, theme: Int, onThemeChange: (Int) -> Unit) {
-    var lock by remember { mutableStateOf(prefs.getBoolean("app_lock", false)) }; var showPinDialog by remember { mutableStateOf(false) }; var pin by remember { mutableStateOf("") }; var haptics by remember { mutableStateOf(prefs.getBoolean("haptics", true)) }; var notifications by remember { mutableStateOf(prefs.getBoolean("notifications", true)) }
-    LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { item { Text("SETTINGS", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold) }; item { SettingSwitch("DARK APPEARANCE", dark, onDarkChange) }; item { SettingSwitch("APP LOCK / BIOMETRIC", lock) { lock = it; prefs.edit().putBoolean("app_lock", it).apply() } }; item { Button(onClick = { pin = ""; showPinDialog = true }, modifier = Modifier.fillMaxWidth()) { Text(if (prefs.getBoolean("pin_enabled", false)) "CHANGE APP PIN" else "SET APP PIN") } }; item { SettingSwitch("HAPTIC FEEDBACK", haptics) { haptics = it; prefs.edit().putBoolean("haptics", it).apply() } }; item { SettingSwitch("SCAN NOTIFICATIONS", notifications) { notifications = it; prefs.edit().putBoolean("notifications", it).apply() } }; item { Text("COLOR THEME", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp)) }; item { Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) { palettes.forEachIndexed { index, colors -> Button(onClick = { onThemeChange(index) }, colors = ButtonDefaults.buttonColors(containerColor = colors[0])) { Text(if (index == theme) "✓" else "${index + 1}") } } } }; item { Card(Modifier.shadow(2.dp, RoundedCornerShape(16.dp))) { Column(Modifier.padding(14.dp)) { Text("PRIVACY & SAFETY", fontWeight = FontWeight.Bold); Text("SCANNING STAYS ON THE DEVICE AND USES ANDROID STORAGE PERMISSIONS.", style = MaterialTheme.typography.bodySmall) } } } }
+    val context = LocalContext.current
+    var lock by remember { mutableStateOf(prefs.getBoolean("app_lock", false)) }
+    var showPinDialog by remember { mutableStateOf(false) }
+    var pin by remember { mutableStateOf("") }
+    var haptics by remember { mutableStateOf(prefs.getBoolean("haptics", true)) }
+    var notifications by remember { mutableStateOf(prefs.getBoolean("notifications", true)) }
+
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        item {
+            Card(
+                Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(22.dp)),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(vertical = 18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
+                        contentDescription = "RSS Data Recovery",
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("RSS DATA RECOVERY", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                    Text("SETTINGS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        item { SettingSwitch("DARK APPEARANCE", dark, onDarkChange) }
+        item { SettingSwitch("APP LOCK / BIOMETRIC", lock) { lock = it; prefs.edit().putBoolean("app_lock", it).apply() } }
+        item { Button(onClick = { pin = ""; showPinDialog = true }, modifier = Modifier.fillMaxWidth()) { Text(if (prefs.getBoolean("pin_enabled", false)) "CHANGE APP PIN" else "SET APP PIN") } }
+        item { SettingSwitch("HAPTIC FEEDBACK", haptics) { haptics = it; prefs.edit().putBoolean("haptics", it).apply() } }
+        item { SettingSwitch("SCAN NOTIFICATIONS", notifications) { notifications = it; prefs.edit().putBoolean("notifications", it).apply() } }
+        item { Text("COLOR THEME", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp)) }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                palettes.forEachIndexed { index, colors ->
+                    Button(onClick = { onThemeChange(index) }, colors = ButtonDefaults.buttonColors(containerColor = colors[0])) {
+                        Text(if (index == theme) "✓" else "${index + 1}")
+                    }
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp))) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("PRIVACY & SAFETY", fontWeight = FontWeight.Bold)
+                    Text("SCANNING STAYS ON THE DEVICE AND USES ANDROID STORAGE PERMISSIONS.", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        item {
+            GlassPanel(
+                modifier = Modifier.fillMaxWidth(),
+                radius = 22.dp,
+                alpha = if (dark) 0.14f else 0.52f
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),
+                        contentDescription = "Razeen Secure Solution",
+                        modifier = Modifier.size(58.dp)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("RAZEEN SECURE SOLUTION", fontWeight = FontWeight.ExtraBold)
+                    Text(
+                        "Mobile & PC Software • CCTV Camera Installation • Networking • System Administration",
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "077 115 5504  •  070 155 5504",
+                        modifier = Modifier.clickable {
+                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:+94771155504")))
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        "rsscctvsolution@gmail.com",
+                        modifier = Modifier.clickable {
+                            context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:rsscctvsolution@gmail.com")))
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        "www.rsscctvsolution.eu.cc",
+                        modifier = Modifier.clickable {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc")))
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable private fun SettingSwitch(title: String, value: Boolean, onChange: (Boolean) -> Unit) { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text(title, Modifier.weight(1f), fontWeight = FontWeight.Medium); Switch(checked = value, onCheckedChange = onChange) } }
