@@ -61,7 +61,7 @@ private data class FoundFile(val name: String, val size: Long, val uri: Uri, val
 private val palettes = listOf(listOf(Color(0xFFB7791F), Color(0xFFF6D365)), listOf(Color(0xFF1677FF), Color(0xFF67D5FF)), listOf(Color(0xFF0E9F6E), Color(0xFF65D6A6)), listOf(Color(0xFF8B5CF6), Color(0xFFE0B7FF)))
 
 @Composable
-fun RecoveryAppV3() {
+fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("rss_recovery", Context.MODE_PRIVATE) }
     var registered by remember { mutableStateOf(prefs.getBoolean("registered", false)) }
@@ -71,6 +71,10 @@ fun RecoveryAppV3() {
     val palette = palettes[theme]
     val scheme = if (dark) darkColorScheme(primary = palette[0], secondary = palette[1]) else lightColorScheme(primary = palette[0], secondary = palette[1])
     MaterialTheme(colorScheme = scheme) {
+        if (appLocked) {
+            LockScreen(onUnlock)
+            return@MaterialTheme
+        }
         AnimatedContent(targetState = registered to welcomed, transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "entry") { state ->
             when {
                 !state.first -> RegistrationScreen { name, email -> prefs.edit().putBoolean("registered", true).putString("name", name).putString("email", email).apply(); registered = true }
@@ -85,6 +89,25 @@ fun RecoveryAppV3() {
     val t = rememberInfiniteTransition(label = "bg")
     val x by t.animateFloat(0f, 1f, infiniteRepeatable(tween(6500), RepeatMode.Reverse), label = "x")
     Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF07111F), Color(0xFF17304A), Color(0xFF090D16)), start = androidx.compose.ui.geometry.Offset(x * 900f, 0f), end = androidx.compose.ui.geometry.Offset(0f, 1500f))))
+}
+
+@Composable private fun LockScreen(onUnlock: () -> Unit) {
+    Box(Modifier.fillMaxSize()) {
+        AnimatedBackdrop()
+        Card(Modifier.fillMaxWidth().padding(24.dp).align(Alignment.Center), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.14f)), elevation = CardDefaults.cardElevation(12.dp)) {
+            Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Icon(Icons.Default.Lock, null, Modifier.size(58.dp), tint = Color(0xFFFFD166))
+                Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Text("APP LOCKED", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("USE YOUR BIOMETRIC TO CONTINUE", color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
+                Button(onClick = onUnlock, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Fingerprint, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("UNLOCK")
+                }
+            }
+        }
+    }
 }
 
 @Composable private fun RegistrationScreen(done: (String, String) -> Unit) {
