@@ -548,7 +548,7 @@ private suspend fun registerRecoveryCustomer(name: String, email: String) = with
         connection.setRequestProperty("Content-Type", "application/json")
         val safeName = name.replace("\\", "\\\\").replace("\"", "\\\"")
         val safeEmail = email.replace("\\", "\\\\").replace("\"", "\\\"")
-        val body = """{"email":"\$safeEmail","display_name":"\$safeName"}"""
+        val body = """{"email":"$safeEmail","display_name":"$safeName"}"""
         connection.outputStream.use { it.write(body.toByteArray()) }
         connection.responseCode
     }
