@@ -62,7 +62,7 @@ private data class FoundFile(val name: String, val size: Long, val uri: Uri, val
 private val palettes = listOf(listOf(Color(0xFFB7791F), Color(0xFFF6D365)), listOf(Color(0xFF1677FF), Color(0xFF67D5FF)), listOf(Color(0xFF0E9F6E), Color(0xFF65D6A6)), listOf(Color(0xFF8B5CF6), Color(0xFFE0B7FF)))
 
 @Composable
-fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onForgotPin: () -> Unit = {}) {
+fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUnlock: (String) -> Unit = {}, onForgotPin: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("rss_recovery", Context.MODE_PRIVATE) }
     var registered by remember { mutableStateOf(prefs.getBoolean("registered", false)) }
@@ -70,15 +70,16 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onForgo
     var dark by remember { mutableStateOf(prefs.getBoolean("dark", false)) }
     var theme by remember { mutableIntStateOf(prefs.getInt("theme", 0).coerceIn(0, 3)) }
     val palette = palettes[theme]
+    val scope = rememberCoroutineScope()
     val scheme = if (dark) darkColorScheme(primary = palette[0], secondary = palette[1]) else lightColorScheme(primary = palette[0], secondary = palette[1])
     MaterialTheme(colorScheme = scheme) {
         if (appLocked) {
-            LockScreen(onUnlock, onForgotPin)
+            LockScreen(prefs, onUnlock, onPinUnlock, onForgotPin)
             return@MaterialTheme
         }
         AnimatedContent(targetState = registered to welcomed, transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "entry") { state ->
             when {
-                !state.first -> RegistrationScreen { name, email -> prefs.edit().putBoolean("registered", true).putString("name", name).putString("email", email).apply(); registered = true }
+                !state.first -> RegistrationScreen { name, email -> prefs.edit().putBoolean("registered", true).putString("name", name).putString("email", email).apply(); registered = true; scope.launch { registerRecoveryCustomer(name, email) } }
                 !state.second -> WelcomeScreen(prefs.getString("name", "USER") ?: "USER") { prefs.edit().putBoolean("welcome_done", true).apply(); welcomed = true }
                 else -> RecoveryMain(prefs, dark, { dark = it; prefs.edit().putBoolean("dark", it).apply() }, theme, { theme = it; prefs.edit().putInt("theme", it).apply() })
             }
@@ -92,7 +93,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onForgo
     Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF07111F), Color(0xFF17304A), Color(0xFF090D16)), start = androidx.compose.ui.geometry.Offset(x * 900f, 0f), end = androidx.compose.ui.geometry.Offset(0f, 1500f))))
 }
 
-@Composable private fun LockScreen(onUnlock: () -> Unit, onForgotPin: () -> Unit) {
+@Composable private fun LockScreen(prefs: SharedPreferences, onUnlock: () -> Unit, onPinUnlock: (String) -> Unit, onForgotPin: () -> Unit) {
     Box(Modifier.fillMaxSize()) {
         AnimatedBackdrop()
         Card(Modifier.fillMaxWidth().padding(24.dp).align(Alignment.Center), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.14f)), elevation = CardDefaults.cardElevation(12.dp)) {
@@ -100,11 +101,16 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onForgo
                 Icon(Icons.Default.Lock, null, Modifier.size(58.dp), tint = Color(0xFFFFD166))
                 Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 Text("APP LOCKED", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("USE YOUR BIOMETRIC TO CONTINUE", color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
+                if (prefs.getBoolean("pin_enabled", false)) {
+                    var pin by remember { mutableStateOf("") }
+                    Text("ENTER YOUR 6-DIGIT PIN", color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
+                    OutlinedTextField(value = pin, onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin = it }, modifier = Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN", color = Color.White) }, singleLine = true, textStyle = LocalTextStyle.current.copy(color = Color.White), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                    Button(onClick = { if (pin.length == 6) onPinUnlock(pin) }, modifier = Modifier.fillMaxWidth(), enabled = pin.length == 6) { Text("UNLOCK WITH PIN") }
+                }
                 Button(onClick = onUnlock, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.Fingerprint, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("UNLOCK")
+                    Text("UNLOCK WITH BIOMETRIC")
                 }
                 TextButton(onClick = onForgotPin) { Text("FORGOT PIN?") }
             }
@@ -347,3 +353,18 @@ private fun hashPin(pin: String): String = MessageDigest.getInstance("SHA-256").
     if (active) { val builder = if (Build.VERSION.SDK_INT >= 26) android.app.Notification.Builder(context, "rss_scan") else android.app.Notification.Builder(context); builder.setSmallIcon(android.R.drawable.stat_sys_download).setContentTitle("SCAN IN PROGRESS").setContentText("RSS Data Recovery is scanning").setOngoing(true); manager.notify(991, builder.build()) } else manager.cancel(991)
 }
 private fun formatBytes(value: Long): String = when { value < 1024 -> "$value B"; value < 1048576 -> "${value / 1024} KB"; value < 1073741824 -> "${value / 1048576} MB"; else -> "${value / 1073741824} GB" }
+
+private suspend fun registerRecoveryCustomer(name: String, email: String) = withContext(Dispatchers.IO) {
+    runCatching {
+        val connection = (java.net.URL("https://rsscore.cv/api/v1/recovery/register").openConnection() as java.net.HttpURLConnection)
+        connection.requestMethod = "POST"
+        connection.connectTimeout = 10_000
+        connection.readTimeout = 10_000
+        connection.doOutput = true
+        connection.setRequestProperty("Content-Type", "application/json")
+        val safeName = name.replace("\\", "\\\\").replace(""", "\\"")
+        val safeEmail = email.replace("\\", "\\\\").replace(""", "\\"")
+        connection.outputStream.use { it.write(("{"email":"" + safeEmail + "","display_name":"" + safeName + ""}").toByteArray()) }
+        connection.responseCode
+    }
+}
