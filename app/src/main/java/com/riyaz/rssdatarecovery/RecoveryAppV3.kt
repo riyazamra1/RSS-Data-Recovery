@@ -148,14 +148,24 @@ fun RecoveryAppV3() {
         ModalDrawerSheet {
             Column(Modifier.fillMaxHeight().padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.AccountCircle, null, Modifier.size(42.dp), tint = Color(0xFFFFB703)); Spacer(Modifier.width(10.dp)); Column { Text("WELCOME, ${name.uppercase()}", fontWeight = FontWeight.ExtraBold); Text(email, style = MaterialTheme.typography.bodySmall) }
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
+                        contentDescription = "RSS Data Recovery",
+                        modifier = Modifier.size(52.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text("WELCOME, ${name.uppercase()}", fontWeight = FontWeight.ExtraBold)
+                        Text(email, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
                 Spacer(Modifier.height(10.dp))
+                Text("RSS DATA RECOVERY", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                DrawerItem("Premium Upgrade", Icons.Default.Star, Color(0xFFFFB703)) { navigate(Page.PREMIUM) }
                 DrawerItem("Home", Icons.Default.Home, Color(0xFF2E86DE)) { navigate(Page.HOME) }
                 DrawerItem("Recovery", Icons.Default.Restore, Color(0xFFE67E22)) { mode = Mode.QUICK; category = null; navigate(Page.SCAN) }
                 DrawerItem("Results", Icons.Default.Folder, Color(0xFF16A085)) { navigate(Page.RESULTS) }
                 DrawerItem("Recovery History", Icons.Default.History, Color(0xFF8E44AD)) { navigate(Page.HISTORY) }
-                DrawerItem("Premium Upgrade", Icons.Default.Star, Color(0xFFFFB703)) { navigate(Page.PREMIUM) }
                 DrawerItem("Settings", Icons.Default.Settings, Color(0xFF5C677D)) { navigate(Page.SETTINGS) }
                 Spacer(Modifier.weight(1f)); HorizontalDivider(); Spacer(Modifier.height(8.dp)); Text("RAZEEN SECURE SOLUTION", fontWeight = FontWeight.Bold)
                 ContactItem("077 115 5504", Icons.Default.Phone, Color(0xFF27AE60)) { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:+94771155504"))) }
