@@ -96,6 +96,11 @@ fun RecoveryAppV3() {
             Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Icon(Icons.Default.Security, null, Modifier.size(52.dp).align(Alignment.CenterHorizontally), tint = Color(0xFFFFD166))
                 Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
+                    contentDescription = "RSS Data Recovery",
+                    modifier = Modifier.size(78.dp)
+                )
                 Text("CREATE YOUR PROFILE", color = Color.White, fontWeight = FontWeight.Bold)
                 OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), label = { Text("FULL NAME", color = Color.White) }, singleLine = true, textStyle = LocalTextStyle.current.copy(color = Color.White), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
                 OutlinedTextField(value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(), label = { Text("EMAIL ADDRESS", color = Color.White) }, singleLine = true, textStyle = LocalTextStyle.current.copy(color = Color.White), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
