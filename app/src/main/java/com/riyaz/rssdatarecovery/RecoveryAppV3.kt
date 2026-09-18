@@ -209,7 +209,6 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                     Column {
                         Text("WELCOME, ${name.uppercase()}", fontWeight = FontWeight.ExtraBold)
                         Text(email, style = MaterialTheme.typography.bodySmall)
-                        }
                     }
                 }
                 Spacer(Modifier.height(10.dp))
