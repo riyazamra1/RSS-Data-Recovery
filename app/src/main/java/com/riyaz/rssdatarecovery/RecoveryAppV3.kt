@@ -161,7 +161,13 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun RecoveryMain(prefs: SharedPreferences, dark: Boolean, onDarkChange: (Boolean) -> Unit, theme: Int, onThemeChange: (Int) -> Unit) {
+@Composable private fun RecoveryMain(
+    prefs: SharedPreferences,
+    dark: Boolean,
+    onDarkChange: (Boolean) -> Unit,
+    theme: Int,
+    onThemeChange: (Int) -> Unit
+) {
     val context = LocalContext.current
     var page by remember { mutableStateOf(Page.HOME) }
     var mode by remember { mutableStateOf(Mode.QUICK) }
@@ -173,72 +179,320 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
     var count by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-    val name = prefs.getString("name", "USER") ?: "USER"
-    val email = prefs.getString("email", "") ?: ""
-    fun navigate(target: Page) { page = target; drawerOpen = false }
-    BackHandler {
-        when {
-            drawerOpen -> drawerOpen = false
-            page != Page.HOME -> page = Page.HOME
-        }
+    val name = prefs.getString("name", "USER")?.trim().orEmpty().ifBlank { "USER" }
+    val email = prefs.getString("email", "")?.trim().orEmpty()
+
+    fun navigate(target: Page) {
+        page = target
+        drawerOpen = false
     }
+
+    BackHandler(enabled = drawerOpen || page != Page.HOME) {
+        if (drawerOpen) drawerOpen = false else page = Page.HOME
+    }
+
     val drawerState = rememberDrawerState(if (drawerOpen) DrawerValue.Open else DrawerValue.Closed)
-    LaunchedEffect(drawerOpen) { if (drawerOpen) drawerState.open() else drawerState.close() }
+
+    LaunchedEffect(drawerOpen) {
+        if (drawerOpen) drawerState.open() else drawerState.close()
+    }
+
     LaunchedEffect(scanning) {
         if (scanning) {
             if (prefs.getBoolean("notifications", true)) {
-                if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                if (Build.VERSION.SDK_INT >= 33 &&
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
                 scanNotification(context, true)
             }
-        } else scanNotification(context, false)
+        } else {
+            scanNotification(context, false)
+        }
     }
-    ModalNavigationDrawer(drawerState = drawerState, drawerContent = {
-        ModalDrawerSheet(
-            modifier = Modifier.widthIn(max = 340.dp),
-            drawerContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-            drawerShape = RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)
-        ) {
-            Column(Modifier.fillMaxHeight().background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)).padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.foundation.Image(
-                        painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
-                        contentDescription = "RSS Data Recovery",
-                        modifier = Modifier.size(52.dp)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Column {
-                        Text("WELCOME, ${name.uppercase()}", fontWeight = FontWeight.ExtraBold)
-                        Text(email, style = MaterialTheme.typography.bodySmall)
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                modifier = Modifier
+                    .width(320.dp)
+                    .fillMaxHeight()
+                    .shadow(18.dp),
+                drawerContainerColor = Color.Transparent,
+                drawerContentColor = if (dark) Color.White else Color(0xFF172033),
+                drawerShape = RoundedCornerShape(topEnd = 30.dp, bottomEnd = 30.dp)
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    paletteGlass(theme, dark, 0.94f),
+                                    Color.White.copy(alpha = if (dark) 0.07f else 0.58f),
+                                    paletteGlass(theme, dark, 0.88f)
+                                )
+                            )
+                        )
+                        .padding(14.dp)
+                ) {
+                    Column(Modifier.fillMaxSize()) {
+                        // Glass profile header: app logo + welcome + name + email.
+                        GlassPanel(
+                            modifier = Modifier.fillMaxWidth(),
+                            radius = 26.dp,
+                            alpha = if (dark) 0.14f else 0.52f
+                        ) {
+                            Row(
+                                Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                androidx.compose.foundation.Image(
+                                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
+                                    contentDescription = "RSS Data Recovery",
+                                    modifier = Modifier
+                                        .size(62.dp)
+                                        .shadow(8.dp, RoundedCornerShape(18.dp))
+                                )
+                                Spacer(Modifier.width(13.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        "WELCOME BACK",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        name,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        maxLines = 1
+                                    )
+                                    if (email.isNotBlank()) {
+                                        Text(
+                                            email,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(18.dp))
+                        Text(
+                            "MAIN",
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(6.dp))
+
+                        GlassMenuItem("Home", Icons.Default.Home, Color(0xFF4F7CFF), page == Page.HOME) {
+                            navigate(Page.HOME)
+                        }
+                        GlassMenuItem("Recovery", Icons.Default.Restore, Color(0xFFFF8A3D), page == Page.SCAN) {
+                            mode = Mode.QUICK
+                            category = null
+                            navigate(Page.SCAN)
+                        }
+                        GlassMenuItem("Results", Icons.Default.Folder, Color(0xFF18B7A0), page == Page.RESULTS) {
+                            navigate(Page.RESULTS)
+                        }
+
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            "SUPPORT",
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(6.dp))
+
+                        GlassMenuItem("Premium Upgrade", Icons.Default.Star, Color(0xFFFFB21A), page == Page.PREMIUM) {
+                            navigate(Page.PREMIUM)
+                        }
+                        GlassMenuItem("Recovery History", Icons.Default.History, Color(0xFF9B5CFF), page == Page.HISTORY) {
+                            navigate(Page.HISTORY)
+                        }
+                        GlassMenuItem("Settings", Icons.Default.Settings, Color(0xFF60708F), page == Page.SETTINGS) {
+                            navigate(Page.SETTINGS)
+                        }
+
+                        Spacer(Modifier.weight(1f))
+
+                        // Bottom RSS branding block. The existing project logo is kept unchanged;
+                        // no replacement/generated logo is introduced.
+                        GlassPanel(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    context.startActivity(
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse("https://www.rsscctvsolution.eu.cc")
+                                        )
+                                    )
+                                },
+                            radius = 24.dp,
+                            alpha = if (dark) 0.16f else 0.48f
+                        ) {
+                            Row(
+                                Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                androidx.compose.foundation.Image(
+                                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
+                                    contentDescription = "RSS Data Recovery",
+                                    modifier = Modifier.size(46.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("RSS", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                                    Text(
+                                        "Razeen Secure Solution",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        "rsscctvsolution.eu.cc",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Icon(Icons.Default.OpenInNew, null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
                     }
                 }
-                Spacer(Modifier.height(10.dp))
-                Text("RSS DATA RECOVERY", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
-                DrawerItem("Premium Upgrade", Icons.Default.Star, Color(0xFFFFB703)) { navigate(Page.PREMIUM) }
-                DrawerItem("Home", Icons.Default.Home, Color(0xFF2E86DE)) { navigate(Page.HOME) }
-                DrawerItem("Recovery", Icons.Default.Restore, Color(0xFFE67E22)) { mode = Mode.QUICK; category = null; navigate(Page.SCAN) }
-                DrawerItem("Results", Icons.Default.Folder, Color(0xFF16A085)) { navigate(Page.RESULTS) }
-                DrawerItem("Recovery History", Icons.Default.History, Color(0xFF8E44AD)) { navigate(Page.HISTORY) }
-                DrawerItem("Settings", Icons.Default.Settings, Color(0xFF5C677D)) { navigate(Page.SETTINGS) }
-                Spacer(Modifier.weight(1f)); HorizontalDivider(); Spacer(Modifier.height(8.dp)); Text("RAZEEN SECURE SOLUTION", fontWeight = FontWeight.Bold)
-                ContactItem("077 115 5504", Icons.Default.Phone, Color(0xFF27AE60)) { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:+94771155504"))) }
-                ContactItem("rsscctvsolution@gmail.com", Icons.Default.Email, Color(0xFF2980B9)) { context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:rsscctvsolution@gmail.com"))) }
-                ContactItem("www.rsscctvsolution.eu.cc", Icons.Default.Language, Color(0xFF8E44AD)) { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc"))) }
             }
         }
-    }) {
-        Scaffold(topBar = { TopAppBar(title = { Text(pageTitle(page, mode)) }, navigationIcon = { IconButton(onClick = { drawerOpen = true }) { Icon(Icons.Default.Menu, "Menu") } }) }, bottomBar = {
-            NavigationBar(modifier = Modifier.shadow(5.dp), tonalElevation = 3.dp) {
-                NavigationBarItem(selected = page == Page.HOME, onClick = { navigate(Page.HOME) }, icon = { Icon(Icons.Default.Home, null, tint = Color(0xFF2E86DE)) }, label = { Text("Home") })
-                NavigationBarItem(selected = page == Page.SCAN, onClick = { mode = Mode.QUICK; navigate(Page.SCAN) }, icon = { Icon(Icons.Default.Restore, null, tint = Color(0xFFE67E22)) }, label = { Text("Recover") })
-                NavigationBarItem(selected = page == Page.RESULTS, onClick = { navigate(Page.RESULTS) }, icon = { Icon(Icons.Default.Folder, null, tint = Color(0xFF16A085)) }, label = { Text("Results") })
-                NavigationBarItem(selected = page == Page.SETTINGS, onClick = { navigate(Page.SETTINGS) }, icon = { Icon(Icons.Default.Settings, null, tint = Color(0xFF8E44AD)) }, label = { Text("Settings") })
+    ) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                pageTitle(page, mode),
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (page == Page.HOME) {
+                                Text(
+                                    "Secure recovery, simply designed",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(
+                            onClick = { drawerOpen = true },
+                            modifier = Modifier
+                                .padding(start = 6.dp)
+                                .size(46.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.surface.copy(alpha = if (dark) .18f else .68f),
+                                    RoundedCornerShape(15.dp)
+                                )
+                        ) {
+                            Icon(Icons.Default.Menu, "Menu")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    )
+                )
+            },
+            bottomBar = {
+                NavigationBar(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .shadow(12.dp, RoundedCornerShape(24.dp))
+                        .border(
+                            1.dp,
+                            Color.White.copy(alpha = if (dark) .18f else .55f),
+                            RoundedCornerShape(24.dp)
+                        ),
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = if (dark) .20f else .72f),
+                    tonalElevation = 0.dp
+                ) {
+                    NavigationBarItem(
+                        selected = page == Page.HOME,
+                        onClick = { navigate(Page.HOME) },
+                        icon = { Icon(Icons.Default.Home, null, tint = Color(0xFF4F7CFF)) },
+                        label = { Text("Home") }
+                    )
+                    NavigationBarItem(
+                        selected = page == Page.SCAN,
+                        onClick = { mode = Mode.QUICK; category = null; navigate(Page.SCAN) },
+                        icon = { Icon(Icons.Default.Restore, null, tint = Color(0xFFFF8A3D)) },
+                        label = { Text("Recover") }
+                    )
+                    NavigationBarItem(
+                        selected = page == Page.RESULTS,
+                        onClick = { navigate(Page.RESULTS) },
+                        icon = { Icon(Icons.Default.Folder, null, tint = Color(0xFF18B7A0)) },
+                        label = { Text("Results") }
+                    )
+                    NavigationBarItem(
+                        selected = page == Page.SETTINGS,
+                        onClick = { navigate(Page.SETTINGS) },
+                        icon = { Icon(Icons.Default.Settings, null, tint = Color(0xFF9B5CFF)) },
+                        label = { Text("Settings") }
+                    )
+                }
             }
-        }) { padding ->
-            Box(Modifier.padding(padding).fillMaxSize()) {
+        ) { padding ->
+            Box(
+                Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.surface,
+                                palette[1].copy(alpha = if (dark) .08f else .12f),
+                                palette[0].copy(alpha = if (dark) .05f else .08f)
+                            )
+                        )
+                    )
+            ) {
                 when (page) {
-                    Page.HOME -> HomeScreen({ mode = Mode.QUICK; category = null; navigate(Page.SCAN) }, { mode = Mode.DEEP; category = null; navigate(Page.SCAN) }, { navigate(Page.HISTORY) }) { category = it; mode = Mode.QUICK; navigate(Page.SCAN) }
-                    Page.SCAN -> ScanScreen(mode, category, scanning, progress, count, { progress = it }, { scanning = it }, { result -> files = result; count = result.size; navigate(Page.RESULTS) }, scope, prefs)
-                    Page.RESULTS -> ResultsScreen(files, prefs.getBoolean("premium", false), scope) { navigate(Page.PREMIUM) }
+                    Page.HOME -> HomeScreen(
+                        { mode = Mode.QUICK; category = null; navigate(Page.SCAN) },
+                        { mode = Mode.DEEP; category = null; navigate(Page.SCAN) },
+                        { navigate(Page.HISTORY) }
+                    ) { category = it; mode = Mode.QUICK; navigate(Page.SCAN) }
+
+                    Page.SCAN -> ScanScreen(
+                        mode,
+                        category,
+                        scanning,
+                        progress,
+                        count,
+                        { progress = it },
+                        { scanning = it },
+                        { result -> files = result; count = result.size; navigate(Page.RESULTS) },
+                        scope,
+                        prefs
+                    )
+
+                    Page.RESULTS -> ResultsScreen(
+                        files,
+                        prefs.getBoolean("premium", false),
+                        scope
+                    ) { navigate(Page.PREMIUM) }
+
                     Page.PREMIUM -> PremiumScreen(prefs.getBoolean("premium", false))
                     Page.HISTORY -> HistoryScreen(prefs)
                     Page.SETTINGS -> SettingsScreen(prefs, dark, onDarkChange, theme, onThemeChange)
@@ -246,6 +500,90 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
             }
         }
     }
+}
+
+@Composable
+private fun GlassPanel(
+    modifier: Modifier = Modifier,
+    radius: androidx.compose.ui.unit.Dp,
+    alpha: Float,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier
+            .shadow(10.dp, RoundedCornerShape(radius))
+            .border(
+                1.dp,
+                Color.White.copy(alpha = 0.34f),
+                RoundedCornerShape(radius)
+            ),
+        shape = RoundedCornerShape(radius),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = alpha)
+        ),
+        elevation = CardDefaults.cardElevation(0.dp),
+        content = content
+    )
+}
+
+@Composable
+private fun GlassMenuItem(
+    title: String,
+    icon: ImageVector,
+    iconColor: Color,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp)
+            .clip(shape)
+            .background(
+                if (selected) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                } else {
+                    Color.White.copy(alpha = 0.08f)
+                }
+            )
+            .border(
+                if (selected) 1.dp else 0.dp,
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                shape
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier
+                .size(38.dp)
+                .background(iconColor.copy(alpha = 0.14f), RoundedCornerShape(13.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = iconColor, modifier = Modifier.size(21.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(
+            title,
+            Modifier.weight(1f),
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+        )
+        if (selected) {
+            Box(
+                Modifier
+                    .size(6.dp)
+                    .background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape)
+            )
+        }
+    }
+}
+
+@Composable
+private fun paletteGlass(theme: Int, dark: Boolean, alpha: Float): Color {
+    val base = palettes[theme.coerceIn(0, palettes.lastIndex)][0]
+    return base.copy(alpha = if (dark) alpha else alpha * 0.52f)
 }
 
 @Composable private fun DrawerItem(title: String, icon: ImageVector, tint: Color, onClick: () -> Unit) {
