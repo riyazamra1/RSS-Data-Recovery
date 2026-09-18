@@ -329,6 +329,9 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
     var showConfirm by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
+    val duplicateKeys = files.groupingBy { it.name.lowercase() + "|" + it.size }.eachCount().filterValues { it > 1 }.keys
+    val duplicateCount = files.count { it.name.lowercase() + "|" + it.size in duplicateKeys }
+
     val visible = files.filter { it.name.contains(search, true) }.let {
         when (sort) {
             1 -> it.sortedByDescending(FoundFile::size)
