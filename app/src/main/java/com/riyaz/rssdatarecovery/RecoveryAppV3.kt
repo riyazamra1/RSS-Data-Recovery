@@ -508,14 +508,20 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                 Modifier
                     .padding(padding)
                     .fillMaxSize()
-                    .background(
-                        if (!dark) Color.White else Brush.linearGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.surface,
-                                palette[1].copy(alpha = .08f),
-                                palette[0].copy(alpha = .05f)
+                    .then(
+                        if (!dark) {
+                            Modifier.background(Color.White)
+                        } else {
+                            Modifier.background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.surface,
+                                        palette[1].copy(alpha = .08f),
+                                        palette[0].copy(alpha = .05f)
+                                    )
+                                )
                             )
-                        )
+                        }
                     )
             ) {
                 when (page) {
