@@ -331,6 +331,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                                     )
                                 }
                             }
+                        }
 
                         Spacer(Modifier.height(18.dp))
                         Text(
