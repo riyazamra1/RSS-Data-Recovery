@@ -322,15 +322,188 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
 }
 
 @Composable private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, upgrade: () -> Unit) {
-    var search by remember { mutableStateOf("") }; var sort by remember { mutableIntStateOf(0) }; var selected by remember { mutableStateOf(setOf<Uri>()) }
-    val visible = files.filter { it.name.contains(search, true) }.let { when (sort) { 1 -> it.sortedByDescending(FoundFile::size); 2 -> it.sortedByDescending(FoundFile::modified); else -> it.sortedBy { file -> file.name.lowercase() } } }
+    val context = LocalContext.current
+    var search by remember { mutableStateOf("") }
+    var sort by remember { mutableIntStateOf(0) }
+    var selected by remember { mutableStateOf(setOf<Uri>()) }
+    var showConfirm by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+
+    val visible = files.filter { it.name.contains(search, true) }.let {
+        when (sort) {
+            1 -> it.sortedByDescending(FoundFile::size)
+            2 -> it.sortedByDescending(FoundFile::modified)
+            else -> it.sortedBy { file -> file.name.lowercase() }
+        }
+    }
+
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { Text("${visible.size} FILES FOUND", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold); OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), label = { Text("SEARCH FILES") }, singleLine = true) }
-        item { Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { FilterChip(selected = sort == 0, onClick = { sort = 0 }, label = { Text("NAME") }); FilterChip(selected = sort == 1, onClick = { sort = 1 }, label = { Text("SIZE") }); FilterChip(selected = sort == 2, onClick = { sort = 2 }, label = { Text("DATE") }) }; Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { TextButton(onClick = { selected = visible.map(FoundFile::uri).toSet() }) { Text("SELECT ALL") }; TextButton(onClick = { selected = emptySet() }) { Text("CLEAR") } } }
-        items(visible) { file -> Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp)), elevation = CardDefaults.cardElevation(1.dp)) { Row(Modifier.clickable { selected = if (file.uri in selected) selected - file.uri else selected + file.uri }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = file.uri in selected, onCheckedChange = null); val info = categoryInfo(file.category); Icon(info.second, null, Modifier.size(27.dp), tint = info.third); Spacer(Modifier.width(8.dp)); Column(Modifier.weight(1f)) { Text(file.name, maxLines = 1); Text(formatBytes(file.size), style = MaterialTheme.typography.bodySmall) }; Text("PREVIEW", style = MaterialTheme.typography.labelSmall) } } }
-        item { Button(onClick = { if (selected.isNotEmpty()) upgrade() }, modifier = Modifier.fillMaxWidth(), enabled = selected.isNotEmpty()) { Text(if (premium) "RECOVER SELECTED" else "RECOVER / UPGRADE") } }
+        item {
+            Text("\${visible.size} FILES FOUND", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+            OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), label = { Text("SEARCH FILES") }, singleLine = true)
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                FilterChip(selected = sort == 0, onClick = { sort = 0 }, label = { Text("NAME") })
+                FilterChip(selected = sort == 1, onClick = { sort = 1 }, label = { Text("SIZE") })
+                FilterChip(selected = sort == 2, onClick = { sort = 2 }, label = { Text("DATE") })
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(onClick = { selected = visible.map(FoundFile::uri).toSet() }) { Text("SELECT ALL") }
+                TextButton(onClick = { selected = emptySet() }) { Text("CLEAR") }
+            }
+        }
+        items(visible) { file ->
+            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp)), elevation = CardDefaults.cardElevation(1.dp)) {
+                Row(Modifier.clickable {
+                    selected = if (file.uri in selected) selected - file.uri else selected + file.uri
+                }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = file.uri in selected, onCheckedChange = null)
+                    val info = categoryInfo(file.category)
+                    Icon(info.second, null, Modifier.size(27.dp), tint = info.third)
+                    Spacer(Modifier.width(8.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(file.name, maxLines = 1)
+                        Text(formatBytes(file.size), style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text("PREVIEW", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+        item {
+            Button(onClick = {
+                val chosen = files.filter { it.uri in selected }
+                if (chosen.any { it.category != Category.IMAGE } && !premium) {
+                    upgrade()
+                } else if (chosen.isNotEmpty()) {
+                    showConfirm = true
+                }
+            }, modifier = Modifier.fillMaxWidth(), enabled = selected.isNotEmpty()) {
+                Text(if (premium) "RECOVER SELECTED" else "RECOVER / UPGRADE")
+            }
+        }
+        message?.let { text ->
+            item {
+                Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(14.dp))) {
+                    Text(text, Modifier.padding(12.dp), fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+
+    if (showConfirm) {
+        val chosen = files.filter { it.uri in selected }
+        AlertDialog(
+            onDismissRequest = { showConfirm = false },
+            title = { Text("CONFIRM RECOVERY") },
+            text = {
+                Text(if (premium) {
+                    "RECOVER \${chosen.size} SELECTED FILE(S) TO RSS DATA RECOVERY."
+                } else {
+                    "FREE RECOVERY SUPPORTS IMAGES ONLY. FILES WILL USE A NEW NAME, REDUCED QUALITY, AND NO ORIGINAL METADATA."
+                })
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirm = false
+                    kotlinx.coroutines.GlobalScope.launch(Dispatchers.Main) {
+                        message = recoverSelectedFiles(context, chosen, premium)
+                        selected = emptySet()
+                    }
+                }) { Text("RECOVER") }
+            },
+            dismissButton = { TextButton(onClick = { showConfirm = false }) { Text("CANCEL") } }
+        )
     }
 }
+
+private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile>, premium: Boolean): String =
+    withContext(Dispatchers.IO) {
+        var recovered = 0
+        var failed = 0
+        files.forEachIndexed { index, file ->
+            try {
+                if (!premium && file.category != Category.IMAGE) {
+                    failed++
+                    return@forEachIndexed
+                }
+                val resolver = context.contentResolver
+                val mime = resolver.getType(file.uri) ?: when (file.category) {
+                    Category.IMAGE -> "image/jpeg"
+                    Category.AUDIO -> "audio/*"
+                    Category.VIDEO -> "video/*"
+                    Category.DOCUMENTS -> "application/octet-stream"
+                    Category.FILES -> "application/octet-stream"
+                }
+
+                if (!premium && file.category == Category.IMAGE) {
+                    val bitmap = android.graphics.BitmapFactory.decodeStream(resolver.openInputStream(file.uri))
+                        ?: throw IllegalStateException("IMAGE DECODE FAILED")
+                    val values = android.content.ContentValues().apply {
+                        put(MediaStore.Images.Media.DISPLAY_NAME, "RSS_RECOVERED_\${System.currentTimeMillis()}_\${index + 1}.jpg")
+                        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                        if (Build.VERSION.SDK_INT >= 29) {
+                            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/RSS Data Recovery")
+                            put(MediaStore.Images.Media.IS_PENDING, 1)
+                        }
+                    }
+                    val outputUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                        ?: throw IllegalStateException("DESTINATION UNAVAILABLE")
+                    try {
+                        resolver.openOutputStream(outputUri)?.use { out ->
+                            if (!bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, out)) {
+                                throw IllegalStateException("IMAGE EXPORT FAILED")
+                            }
+                        } ?: throw IllegalStateException("OUTPUT UNAVAILABLE")
+                        if (Build.VERSION.SDK_INT >= 29) {
+                            values.clear()
+                            values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                            resolver.update(outputUri, values, null, null)
+                        }
+                    } catch (e: Exception) {
+                        resolver.delete(outputUri, null, null)
+                        throw e
+                    } finally {
+                        bitmap.recycle()
+                    }
+                } else {
+                    val values = android.content.ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, file.name.ifBlank { "RSS_RECOVERED_\${System.currentTimeMillis()}" })
+                        put(MediaStore.MediaColumns.MIME_TYPE, mime)
+                        if (Build.VERSION.SDK_INT >= 29) {
+                            put(MediaStore.MediaColumns.RELATIVE_PATH, if (file.category == Category.IMAGE) "Pictures/RSS Data Recovery" else "Download/RSS Data Recovery")
+                            put(MediaStore.MediaColumns.IS_PENDING, 1)
+                        }
+                    }
+                    val collection = if (file.category == Category.IMAGE) MediaStore.Images.Media.EXTERNAL_CONTENT_URI else MediaStore.Downloads.EXTERNAL_CONTENT_URI
+                    val outputUri = resolver.insert(collection, values)
+                        ?: throw IllegalStateException("DESTINATION UNAVAILABLE")
+                    try {
+                        resolver.openInputStream(file.uri)?.use { input ->
+                            resolver.openOutputStream(outputUri)?.use { output -> input.copyTo(output) }
+                                ?: throw IllegalStateException("OUTPUT UNAVAILABLE")
+                        } ?: throw IllegalStateException("SOURCE UNAVAILABLE")
+                        if (Build.VERSION.SDK_INT >= 29) {
+                            values.clear()
+                            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                            resolver.update(outputUri, values, null, null)
+                        }
+                    } catch (e: Exception) {
+                        resolver.delete(outputUri, null, null)
+                        throw e
+                    }
+                }
+                recovered++
+            } catch (_: Exception) {
+                failed++
+            }
+        }
+        when {
+            recovered > 0 && failed == 0 -> "RECOVERED \$recovered FILE(S) TO RSS DATA RECOVERY."
+            recovered > 0 -> "RECOVERED \$recovered FILE(S). \$failed FILE(S) COULD NOT BE RECOVERED."
+            else -> "RECOVERY FAILED. PLEASE CHECK STORAGE PERMISSIONS AND TRY AGAIN."
+        }
+    }
 
 @Composable private fun PremiumScreen(active: Boolean) {
     val rows = listOf("Deep recovery", "Audio / video / files", "Original file name", "Original metadata", "Original quality", "Recovery destination")
@@ -355,7 +528,8 @@ private fun hashPin(pin: String): String = MessageDigest.getInstance("SHA-256").
     if (active) { val builder = if (Build.VERSION.SDK_INT >= 26) android.app.Notification.Builder(context, "rss_scan") else android.app.Notification.Builder(context); builder.setSmallIcon(android.R.drawable.stat_sys_download).setContentTitle("SCAN IN PROGRESS").setContentText("RSS Data Recovery is scanning").setOngoing(true); manager.notify(991, builder.build()) } else manager.cancel(991)
 }
 private fun storageUsage(context: Context): Triple<String, String, Float> {
-    val stat = android.os.StatFs(context.filesDir.absolutePath)
+    val root = android.os.Environment.getExternalStorageDirectory()
+    val stat = android.os.StatFs(root.absolutePath)
     val total = stat.totalBytes.coerceAtLeast(1L)
     val free = stat.availableBytes.coerceIn(0L, total)
     val used = total - free
@@ -372,9 +546,10 @@ private suspend fun registerRecoveryCustomer(name: String, email: String) = with
         connection.readTimeout = 10_000
         connection.doOutput = true
         connection.setRequestProperty("Content-Type", "application/json")
-        val safeName = name.replace("\\", "\\\\").replace(""", "\\"")
-        val safeEmail = email.replace("\\", "\\\\").replace(""", "\\"")
-        connection.outputStream.use { it.write(("{"email":"" + safeEmail + "","display_name":"" + safeName + ""}").toByteArray()) }
+        val safeName = name.replace("\\", "\\\\").replace("\"", "\\\"")
+        val safeEmail = email.replace("\\", "\\\\").replace("\"", "\\\"")
+        val body = """{"email":"\$safeEmail","display_name":"\$safeName"}"""
+        connection.outputStream.use { it.write(body.toByteArray()) }
         connection.responseCode
     }
 }
