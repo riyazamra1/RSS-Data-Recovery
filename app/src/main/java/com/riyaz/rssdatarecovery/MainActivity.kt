@@ -20,7 +20,7 @@ class MainActivity : FragmentActivity() {
     private var authInProgress = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { RecoveryAppV3(appLocked = appLocked, onUnlock = { authenticate() }) }
+        setContent { RecoveryAppV3(appLocked = appLocked, onUnlock = { authenticate() }, onForgotPin = { forgotPin() }) }
     }
 
     override fun onStart() {
@@ -36,6 +36,34 @@ class MainActivity : FragmentActivity() {
         super.onStop()
         authenticated = false
         if (getSharedPreferences("rss_recovery", MODE_PRIVATE).getBoolean("app_lock", false)) appLocked = true
+    }
+
+    private fun forgotPin() {
+        if (authInProgress) return
+        val manager = BiometricManager.from(this)
+        if (manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK) != BiometricManager.BIOMETRIC_SUCCESS) {
+            Toast.makeText(this, "BIOMETRIC IS REQUIRED TO RESET YOUR PIN", Toast.LENGTH_LONG).show()
+            return
+        }
+        authInProgress = true
+        val executor = ContextCompat.getMainExecutor(this)
+        val prompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                getSharedPreferences("rss_recovery", MODE_PRIVATE).edit().remove("pin_hash").putBoolean("pin_enabled", false).apply()
+                authenticated = true
+                appLocked = false
+                authInProgress = false
+                Toast.makeText(this@MainActivity, "PIN RESET. SET A NEW PIN IN SETTINGS.", Toast.LENGTH_LONG).show()
+            }
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                authInProgress = false
+            }
+        })
+        prompt.authenticate(BiometricPrompt.PromptInfo.Builder()
+            .setTitle("RESET APP PIN")
+            .setSubtitle("VERIFY BIOMETRIC TO RESET YOUR PIN")
+            .setNegativeButtonText("CANCEL")
+            .build())
     }
 
     private fun authenticate() {
