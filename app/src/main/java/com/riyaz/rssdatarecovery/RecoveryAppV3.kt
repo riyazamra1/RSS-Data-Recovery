@@ -239,7 +239,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                 when (page) {
                     Page.HOME -> HomeScreen({ mode = Mode.QUICK; category = null; navigate(Page.SCAN) }, { mode = Mode.DEEP; category = null; navigate(Page.SCAN) }, { navigate(Page.HISTORY) }) { category = it; mode = Mode.QUICK; navigate(Page.SCAN) }
                     Page.SCAN -> ScanScreen(mode, category, scanning, progress, count, { progress = it }, { scanning = it }, { result -> files = result; count = result.size; navigate(Page.RESULTS) }, scope, prefs)
-                    Page.RESULTS -> ResultsScreen(files, prefs.getBoolean("premium", false)) { navigate(Page.PREMIUM) }
+                    Page.RESULTS -> ResultsScreen(files, prefs.getBoolean("premium", false), scope) { navigate(Page.PREMIUM) }
                     Page.PREMIUM -> PremiumScreen(prefs.getBoolean("premium", false))
                     Page.HISTORY -> HistoryScreen(prefs)
                     Page.SETTINGS -> SettingsScreen(prefs, dark, onDarkChange, theme, onThemeChange)
@@ -321,7 +321,7 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
     result
 }
 
-@Composable private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, upgrade: () -> Unit) {
+@Composable private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, scope: kotlinx.coroutines.CoroutineScope, upgrade: () -> Unit) {
     val context = LocalContext.current
     var search by remember { mutableStateOf("") }
     var sort by remember { mutableIntStateOf(0) }
@@ -406,7 +406,7 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
             confirmButton = {
                 TextButton(onClick = {
                     showConfirm = false
-                    kotlinx.coroutines.GlobalScope.launch(Dispatchers.Main) {
+                    scope.launch(Dispatchers.Main) {
                         message = recoverSelectedFiles(context, chosen, premium)
                         selected = emptySet()
                     }
