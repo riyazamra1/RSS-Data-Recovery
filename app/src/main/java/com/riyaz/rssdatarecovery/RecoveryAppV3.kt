@@ -115,6 +115,11 @@ fun RecoveryAppV3() {
         AnimatedBackdrop()
         Card(Modifier.fillMaxWidth().padding(22.dp).align(Alignment.Center), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .13f)), elevation = CardDefaults.cardElevation(12.dp)) {
             Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
+                    contentDescription = "RSS Data Recovery",
+                    modifier = Modifier.size(86.dp)
+                )
                 Text("CONGRATULATIONS 👏🎉", color = Color(0xFFFFD166), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 Text("WELCOME, ${name.uppercase()}!", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text("YOUR RECOVERY SPACE IS READY.", color = Color.White, fontWeight = FontWeight.SemiBold)
@@ -146,7 +151,7 @@ fun RecoveryAppV3() {
     LaunchedEffect(scanning) {
         if (scanning) {
             if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-            scanNotification(context, true)
+            if (prefs.getBoolean("notifications", true)) scanNotification(context, true)
         } else scanNotification(context, false)
     }
     ModalNavigationDrawer(drawerState = drawerState, drawerContent = {
