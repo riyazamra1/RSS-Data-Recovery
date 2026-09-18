@@ -511,6 +511,8 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
     val rows = listOf("Deep recovery", "Audio / video / files", "Original file name", "Original metadata", "Original quality", "Recovery destination")
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { item { Text("PREMIUM", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold); Text(if (active) "PREMIUM IS ACTIVE" else "UNLOCK FULL RECOVERY") }; item { Card(Modifier.shadow(3.dp, RoundedCornerShape(18.dp)), elevation = CardDefaults.cardElevation(2.dp)) { Column(Modifier.padding(12.dp)) { Row { Text("FEATURE", Modifier.weight(1f), fontWeight = FontWeight.Bold); Text("FREE", Modifier.width(52.dp), fontWeight = FontWeight.Bold); Text("PREMIUM", Modifier.width(72.dp), fontWeight = FontWeight.Bold) }; rows.forEachIndexed { index, row -> Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(if (index == 0) Icons.Default.Search else Icons.Default.CheckCircle, null, Modifier.size(20.dp), tint = if (index == 0) Color(0xFFE67E22) else Color(0xFF27AE60)); Spacer(Modifier.width(6.dp)); Text(row, Modifier.weight(1f)); Text(if (index == 0) "✓" else "—", Modifier.width(52.dp)); Text("✓", Modifier.width(72.dp), color = Color(0xFF27AE60)) } } } } }
 }
+}
+
 
 @Composable private fun HistoryScreen(prefs: SharedPreferences) {
     val lastScan = prefs.getString("last_scan", null)
