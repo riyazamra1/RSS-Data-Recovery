@@ -162,8 +162,12 @@ fun RecoveryAppV3() {
         } else scanNotification(context, false)
     }
     ModalNavigationDrawer(drawerState = drawerState, drawerContent = {
-        ModalDrawerSheet {
-            Column(Modifier.fillMaxHeight().padding(16.dp)) {
+        ModalDrawerSheet(
+            modifier = Modifier.widthIn(max = 340.dp),
+            drawerContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+            drawerShape = RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)
+        ) {
+            Column(Modifier.fillMaxHeight().background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)).padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.foundation.Image(
                         painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
@@ -174,6 +178,7 @@ fun RecoveryAppV3() {
                     Column {
                         Text("WELCOME, ${name.uppercase()}", fontWeight = FontWeight.ExtraBold)
                         Text(email, style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
                 Spacer(Modifier.height(10.dp))
