@@ -1,7 +1,8 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:gravity="center">
-        <inset android:inset="18dp">
-            <bitmap android:src="@drawable/rss_data_recovery_logo" android:gravity="center" />
-        </inset>
+        <bitmap
+            android:src="@drawable/rss_data_recovery_splash_logo"
+            android:gravity="center"
+            android:filter="true" />
     </item>
 </layer-list>
