@@ -9,19 +9,25 @@ import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 class MainActivity : FragmentActivity() {
     private var authenticated = false
+    private var appLocked by mutableStateOf(false)
     private var authInProgress = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { RecoveryAppV3() }
+        setContent { RecoveryAppV3(appLocked = appLocked, onUnlock = { authenticate() }) }
     }
 
     override fun onStart() {
         super.onStart()
         val prefs = getSharedPreferences("rss_recovery", MODE_PRIVATE)
         if (prefs.getBoolean("app_lock", false) && prefs.getBoolean("registered", false) && prefs.getBoolean("welcome_done", false) && !authenticated) {
+            appLocked = true
             authenticate()
         }
     }
@@ -29,6 +35,7 @@ class MainActivity : FragmentActivity() {
     override fun onStop() {
         super.onStop()
         authenticated = false
+        if (getSharedPreferences("rss_recovery", MODE_PRIVATE).getBoolean("app_lock", false)) appLocked = true
     }
 
     private fun authenticate() {
@@ -40,6 +47,7 @@ class MainActivity : FragmentActivity() {
             val prompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     authenticated = true
+                    appLocked = false
                     authInProgress = false
                 }
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
