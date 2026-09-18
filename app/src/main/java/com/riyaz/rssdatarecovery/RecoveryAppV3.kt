@@ -284,20 +284,27 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
 @Composable private fun ScanScreen(mode: Mode, category: Category?, scanning: Boolean, progress: Float, count: Int, setProgress: (Float) -> Unit, setScanning: (Boolean) -> Unit, done: (List<FoundFile>) -> Unit, scope: kotlinx.coroutines.CoroutineScope, prefs: SharedPreferences) {
     val context = LocalContext.current
     var paused by remember { mutableStateOf(false) }
+    var scanJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
         item { Card(Modifier.shadow(3.dp, RoundedCornerShape(18.dp)), elevation = CardDefaults.cardElevation(2.dp)) { Column(Modifier.padding(14.dp)) { Text(if (mode == Mode.QUICK) "QUICK RECOVERY" else "DEEP RECOVERY", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold); category?.let { Text(categoryInfo(it).first.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) } } } }
         item { Card(Modifier.shadow(3.dp, RoundedCornerShape(18.dp)), elevation = CardDefaults.cardElevation(2.dp)) { Column(Modifier.padding(14.dp)) {
             if (scanning) {
-                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp)); Text("${(progress * 100).toInt()}% • $count FILES"); Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) { OutlinedButton(onClick = { paused = !paused }) { Text(if (paused) "RESUME" else "PAUSE") }; OutlinedButton(onClick = { setScanning(false); paused = false }) { Text("CANCEL") } }
+                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp)); Text("${(progress * 100).toInt()}% • $count FILES"); Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) { OutlinedButton(onClick = { paused = !paused }) { Text(if (paused) "RESUME" else "PAUSE") }; OutlinedButton(onClick = { scanJob?.cancel(); scanJob = null; setScanning(false); paused = false; setProgress(0f) }) { Text("CANCEL") } }
             } else {
                 Text("READY TO SCAN", fontWeight = FontWeight.Bold); Spacer(Modifier.height(9.dp)); Button(onClick = {
                     if (Build.VERSION.SDK_INT >= 33) permissionLauncher.launch(arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_AUDIO))
                     setScanning(true); setProgress(0f)
-                    scope.launch {
-                        val result = queryFiles(context, category)
-                        for (i in 1..24) { while (paused) delay(100); delay(if (mode == Mode.DEEP) 55 else 30); setProgress(i / 24f) }
-                        prefs.edit().putString("last_scan", DateFormat.getDateTimeInstance().format(Date())).putInt("last_count", result.size).apply(); setScanning(false); done(result)
+                    scanJob = scope.launch {
+                        try {
+                            val result = queryFiles(context, category)
+                            for (i in 1..24) { kotlinx.coroutines.ensureActive(); while (paused) { kotlinx.coroutines.ensureActive(); delay(100) }; delay(if (mode == Mode.DEEP) 55 else 30); setProgress(i / 24f) }
+                            prefs.edit().putString("last_scan", DateFormat.getDateTimeInstance().format(Date())).putInt("last_count", result.size).apply()
+                            setScanning(false)
+                            done(result)
+                        } finally {
+                            scanJob = null
+                        }
                     }
                 }, modifier = Modifier.fillMaxWidth()) { Text("START SCAN") }
             }
