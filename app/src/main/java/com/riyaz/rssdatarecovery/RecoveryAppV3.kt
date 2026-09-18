@@ -506,6 +506,7 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
             else -> "RECOVERY FAILED. PLEASE CHECK STORAGE PERMISSIONS AND TRY AGAIN."
         }
     }
+}
 
 @Composable private fun PremiumScreen(active: Boolean) {
     val rows = listOf("Deep recovery", "Audio / video / files", "Original file name", "Original metadata", "Original quality", "Recovery destination")
