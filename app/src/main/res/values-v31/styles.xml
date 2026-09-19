@@ -4,6 +4,5 @@
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/rss_data_recovery_logo</item>
         <item name="android:windowSplashScreenAnimationDuration">350</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
-        <item name="android:postSplashScreenTheme">@style/Theme.RSSDataRecovery</item>
     </style>
 </resources>
