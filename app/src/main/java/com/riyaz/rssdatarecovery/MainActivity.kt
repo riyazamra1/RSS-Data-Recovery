@@ -9,9 +9,8 @@ import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.compose.BackHandler
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +24,7 @@ class MainActivity : FragmentActivity() {
     private var authenticated = false
     private var appLocked by mutableStateOf(false)
     private var authInProgress = false
+    private var resetPinAfterBiometric = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +67,13 @@ class MainActivity : FragmentActivity() {
         if (authInProgress) return
         val prefs = getSharedPreferences("rss_recovery", MODE_PRIVATE)
         val email = prefs.getString("email", "")?.trim().orEmpty()
+        val manager = BiometricManager.from(this)
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK
+        if (manager.canAuthenticate(authenticators) == BiometricManager.BIOMETRIC_SUCCESS) {
+            resetPinAfterBiometric = true
+            authenticate()
+            return
+        }
         if (email.isEmpty()) {
             Toast.makeText(this, "REGISTERED EMAIL NOT FOUND", Toast.LENGTH_LONG).show()
             return
@@ -82,7 +89,9 @@ class MainActivity : FragmentActivity() {
     private fun requestResetCode(email: String) {
         authInProgress = true
         CoroutineScope(Dispatchers.Main).launch {
-            val result = withContext(Dispatchers.IO) { postJson("https://rsscore.cv/api/v1/recovery/request-reset", JSONObject().put("email", email)) }
+            val result = withContext(Dispatchers.IO) {
+                postJson("https://rsscore.cv/api/v1/recovery/request-reset", JSONObject().put("email", email))
+            }
             authInProgress = false
             if (result.first) {
                 showCodeDialog(email)
@@ -114,16 +123,19 @@ class MainActivity : FragmentActivity() {
     private fun verifyResetCode(email: String, code: String) {
         authInProgress = true
         CoroutineScope(Dispatchers.Main).launch {
-            val result = withContext(Dispatchers.IO) { postJson("https://rsscore.cv/api/v1/recovery/verify-reset", JSONObject().put("email", email).put("code", code)) }
+            val result = withContext(Dispatchers.IO) {
+                postJson("https://rsscore.cv/api/v1/recovery/verify-reset", JSONObject().put("email", email).put("code", code))
+            }
             authInProgress = false
             if (result.first) {
                 val token = runCatching { JSONObject(result.second).getString("reset_token") }.getOrNull()
-                if (!token.isNullOrEmpty()) showNewPinDialog(email, token) else Toast.makeText(this@MainActivity, "RESET AUTHORIZATION FAILED", Toast.LENGTH_LONG).show()
+                if (!token.isNullOrEmpty()) showNewPinDialog(email, token, false)
+                else Toast.makeText(this@MainActivity, "RESET AUTHORIZATION FAILED", Toast.LENGTH_LONG).show()
             } else Toast.makeText(this@MainActivity, result.second, Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun showNewPinDialog(email: String, resetToken: String) {
+    private fun showNewPinDialog(email: String, resetToken: String, localBiometric: Boolean) {
         val input = android.widget.EditText(this).apply {
             hint = "NEW 6-DIGIT PIN"
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
@@ -137,10 +149,21 @@ class MainActivity : FragmentActivity() {
             .setPositiveButton("SAVE PIN") { _, _ ->
                 val pin = input.text.toString().trim()
                 if (pin.length == 6 && pin.all(Char::isDigit)) {
-                    consumeResetAndSavePin(email, resetToken, pin)
+                    if (localBiometric) saveLocalPin(pin) else consumeResetAndSavePin(email, resetToken, pin)
                 } else Toast.makeText(this, "PIN MUST CONTAIN 6 DIGITS", Toast.LENGTH_SHORT).show()
             }
             .show()
+    }
+
+    private fun saveLocalPin(pin: String) {
+        getSharedPreferences("rss_recovery", MODE_PRIVATE).edit()
+            .putString("pin_hash", hashPin(pin))
+            .putBoolean("pin_enabled", true)
+            .putBoolean("app_lock", true)
+            .apply()
+        authenticated = true
+        appLocked = false
+        Toast.makeText(this, "PIN RESET SUCCESSFULLY", Toast.LENGTH_LONG).show()
     }
 
     private fun consumeResetAndSavePin(email: String, token: String, pin: String) {
@@ -150,12 +173,8 @@ class MainActivity : FragmentActivity() {
                 postJson("https://rsscore.cv/api/v1/recovery/consume-reset", JSONObject().put("email", email).put("reset_token", token))
             }
             authInProgress = false
-            if (result.first) {
-                getSharedPreferences("rss_recovery", MODE_PRIVATE).edit().putString("pin_hash", hashPin(pin)).putBoolean("pin_enabled", true).putBoolean("app_lock", true).apply()
-                authenticated = true
-                appLocked = false
-                Toast.makeText(this@MainActivity, "PIN RESET SUCCESSFULLY", Toast.LENGTH_LONG).show()
-            } else Toast.makeText(this@MainActivity, result.second, Toast.LENGTH_LONG).show()
+            if (result.first) saveLocalPin(pin)
+            else Toast.makeText(this@MainActivity, result.second, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -171,18 +190,24 @@ class MainActivity : FragmentActivity() {
                     authenticated = true
                     appLocked = false
                     authInProgress = false
+                    if (resetPinAfterBiometric) {
+                        resetPinAfterBiometric = false
+                        showNewPinDialog("", "", true)
+                    }
                 }
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     authInProgress = false
+                    resetPinAfterBiometric = false
                     Toast.makeText(this@MainActivity, "APP LOCKED", Toast.LENGTH_SHORT).show()
                 }
             })
-            prompt.authenticate(BiometricPrompt.PromptInfo.Builder()
-                .setTitle("RSS DATA RECOVERY")
-                .setSubtitle("UNLOCK WITH BIOMETRIC")
+            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                .setTitle(if (resetPinAfterBiometric) "RESET APP PIN" else "RSS DATA RECOVERY")
+                .setSubtitle(if (resetPinAfterBiometric) "VERIFY YOUR BIOMETRIC TO CREATE A NEW PIN" else "UNLOCK WITH BIOMETRIC")
                 .setNegativeButtonText("CANCEL")
-                .build())
-        } else {
+                .build()
+            prompt.authenticate(promptInfo)
+        } else if (!resetPinAfterBiometric) {
             if (getSharedPreferences("rss_recovery", MODE_PRIVATE).getBoolean("pin_enabled", false)) {
                 Toast.makeText(this, "USE YOUR PIN TO UNLOCK", Toast.LENGTH_SHORT).show()
             } else {
@@ -205,7 +230,7 @@ class MainActivity : FragmentActivity() {
             val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             val message = runCatching { JSONObject(text).optString("error").ifEmpty { text } }.getOrDefault(text)
             Pair(status in 200..299, if (status in 200..299) text else message.ifEmpty { "REQUEST FAILED ($status)" })
-        } catch (error: Exception) {
+        } catch (_: Exception) {
             Pair(false, "EMAIL RESET SERVICE UNAVAILABLE")
         }
     }
