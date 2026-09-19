@@ -248,9 +248,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .background(
-                            palettes[theme.coerceIn(0, palettes.lastIndex)][0].copy(alpha = 0.06f)
-                        )
+                        .background(MaterialTheme.colorScheme.surface)
                         .padding(14.dp)
                 ) {
                     Box(Modifier.fillMaxSize()) {
@@ -312,7 +310,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                                 .padding(start = 6.dp)
                                 .size(46.dp)
                                 .background(
-                                    MaterialTheme.colorScheme.surface.copy(alpha = if (dark) .18f else .68f),
+                                    MaterialTheme.colorScheme.surface,
                                     RoundedCornerShape(15.dp)
                                 )
                         ) {
@@ -419,10 +417,8 @@ private fun GlassPanel(
                 RoundedCornerShape(radius)
             ),
         shape = RoundedCornerShape(radius),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = alpha.coerceIn(0f,0.06f))
-        ),
-        elevation = CardDefaults.cardElevation(0.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(1.dp),
         content = content
     )
 }
@@ -441,18 +437,8 @@ private fun GlassMenuItem(
             .fillMaxWidth()
             .padding(vertical = 3.dp)
             .clip(shape)
-            .background(
-                if (selected) {
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
-                } else {
-                    Color.White.copy(alpha = 0.035f)
-                }
-            )
-            .border(
-                if (selected) 1.dp else 0.dp,
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
-                shape
-            )
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(if (selected) 1.dp else 0.dp,MaterialTheme.colorScheme.primary.copy(alpha = if (selected) .45f else 0f),shape)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -484,7 +470,7 @@ private fun GlassMenuItem(
 @Composable
 private fun paletteGlass(theme: Int, dark: Boolean, alpha: Float): Color {
     val base = palettes[theme.coerceIn(0, palettes.lastIndex)][0]
-    return base.copy(alpha = if (dark) alpha else alpha * 0.52f)
+    return base.copy(alpha = 1f)
 }
 
 @Composable private fun DrawerItem(title: String, icon: ImageVector, tint: Color, onClick: () -> Unit) {
