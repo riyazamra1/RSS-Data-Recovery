@@ -952,25 +952,11 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
     var haptics by remember { mutableStateOf(prefs.getBoolean("haptics", true)) }
     var notifications by remember { mutableStateOf(prefs.getBoolean("notifications", true)) }
 
-    LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Card(
-                Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(22.dp)),
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(vertical = 18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    androidx.compose.foundation.Image(
-                        painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
-                        contentDescription = "RSS Data Recovery",
-                        modifier = Modifier.size(64.dp)
-                    )
+            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(22.dp)), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.fillMaxWidth().padding(vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    androidx.compose.foundation.Image(painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), contentDescription = "RSS Data Recovery", modifier = Modifier.size(64.dp))
                     Spacer(Modifier.height(8.dp))
                     Text("RSS DATA RECOVERY", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
                     Text("SETTINGS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -982,13 +968,24 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
         item { Button(onClick = { pin = ""; showPinDialog = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Password, null); Spacer(Modifier.width(7.dp)); Text(if (prefs.getBoolean("pin_enabled", false)) "CHANGE APP PIN" else "SET APP PIN") } }
         item { SettingSwitch("HAPTIC FEEDBACK", haptics) { haptics = it; prefs.edit().putBoolean("haptics", it).apply() } }
         item { SettingSwitch("SCAN NOTIFICATIONS", notifications) { notifications = it; prefs.edit().putBoolean("notifications", it).apply() } }
+        item {
+            Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp))) {
+                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DeleteSweep, null, tint = Color(0xFFE74C3C))
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("CLEAR RECOVERY HISTORY", fontWeight = FontWeight.Bold)
+                        Text("Remove saved scan and recovery activity.", style = MaterialTheme.typography.bodySmall)
+                    }
+                    TextButton(onClick = { prefs.edit().remove("recovery_history").remove("last_scan").remove("last_count").apply() }) { Text("CLEAR") }
+                }
+            }
+        }
         item { Text("COLOR THEME", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp)) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 palettes.forEachIndexed { index, colors ->
-                    Button(onClick = { onThemeChange(index) }, colors = ButtonDefaults.buttonColors(containerColor = colors[0])) {
-                        Text(if (index == theme) "✓" else "${index + 1}")
-                    }
+                    Button(onClick = { onThemeChange(index) }, colors = ButtonDefaults.buttonColors(containerColor = colors[0])) { Text(if (index == theme) "✓" else "${index + 1}") }
                 }
             }
         }
@@ -1001,82 +998,30 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
             }
         }
         item {
-            GlassPanel(
-                modifier = Modifier.fillMaxWidth(),
-                radius = 22.dp,
-                alpha = if (dark) 0.055f else 0.06f
-            ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    androidx.compose.foundation.Image(
-                        painter = androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),
-                        contentDescription = "Razeen Secure Solution",
-                        modifier = Modifier.size(58.dp)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text("RAZEEN SECURE SOLUTION", fontWeight = FontWeight.ExtraBold)
-                    Text(
-                        "Mobile & PC Software • CCTV Camera Installation • Networking • System Administration",
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "077 115 5504  •  070 155 5504",
-                        modifier = Modifier.clickable {
-                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:+94771155504")))
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        "rsscctvsolution@gmail.com",
-                        modifier = Modifier.clickable {
-                            context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:rsscctvsolution@gmail.com")))
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        "www.rsscctvsolution.eu.cc",
-                        modifier = Modifier.clickable {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc")))
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+            Column(Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("RAZEEN SECURE SOLUTION", fontWeight = FontWeight.ExtraBold)
+                Text("Mobile & PC Software • CCTV Camera Installation • Networking • System Administration", style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text("077 115 5504  •  070 155 5504", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Text("rsscctvsolution@gmail.com", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Text("www.rsscctvsolution.eu.cc", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(5.dp))
+                androidx.compose.foundation.Image(painter = androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo), contentDescription = "Razeen Secure Solution", modifier = Modifier.size(58.dp))
             }
         }
     }
-}
 
     if (showPinDialog) {
         AlertDialog(
             onDismissRequest = { showPinDialog = false },
             title = { Text(if (prefs.getBoolean("pin_enabled", false)) "CHANGE APP PIN" else "SET APP PIN") },
             text = {
-                OutlinedTextField(
-                    value = pin,
-                    onValueChange = { value -> if (value.length <= 6 && value.all(Char::isDigit)) pin = value },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("6-DIGIT PIN") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
-                )
+                OutlinedTextField(value = pin, onValueChange = { value -> if (value.length <= 6 && value.all(Char::isDigit)) pin = value }, modifier = Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
             },
             confirmButton = {
-                TextButton(
-                    enabled = pin.length == 6,
-                    onClick = {
-                        prefs.edit().putString("pin_hash", hashPin(pin)).putBoolean("pin_enabled", true).putBoolean("app_lock", true).apply()
-                        lock = true
-                        showPinDialog = false
-                        pin = ""
-                    }
-                ) { Text("SAVE") }
+                TextButton(enabled = pin.length == 6, onClick = {
+                    prefs.edit().putString("pin_hash", hashPin(pin)).putBoolean("pin_enabled", true).putBoolean("app_lock", true).apply()
+                    lock = true; showPinDialog = false; pin = ""
+                }) { Text("SAVE") }
             },
             dismissButton = { TextButton(onClick = { showPinDialog = false }) { Text("CANCEL") } }
         )
