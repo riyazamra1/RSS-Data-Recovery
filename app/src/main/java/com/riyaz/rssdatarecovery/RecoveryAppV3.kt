@@ -44,8 +44,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -100,6 +103,13 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
     }
 }
 
+@Composable
+private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF2EA7FF)) {
+    Box(modifier.background(tint.copy(alpha = 0.18f), androidx.compose.foundation.shape.CircleShape).graphicsLayer {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) renderEffect = BlurEffect(42f, 42f, TileMode.Clamp)
+    })
+}
+
 @Composable private fun AnimatedBackdrop() {
     val t = rememberInfiniteTransition(label = "bg")
     val x by t.animateFloat(0f, 1f, infiniteRepeatable(tween(5200), RepeatMode.Reverse), label = "x")
@@ -114,7 +124,8 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 @Composable private fun LockScreen(prefs: SharedPreferences, onUnlock: () -> Unit, onPinUnlock: (String) -> Unit, onForgotPin: () -> Unit) {
     Box(Modifier.fillMaxSize()) {
         AnimatedBackdrop()
-        Card(Modifier.fillMaxWidth().padding(24.dp).align(Alignment.Center), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f)), elevation = CardDefaults.cardElevation(4.dp)) {
+        SoftBlurGlow(Modifier.align(Alignment.Center).size(320.dp), Color(0xFF8B5CF6))
+        Card(Modifier.fillMaxWidth().padding(24.dp).align(Alignment.Center), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF102033)), elevation = CardDefaults.cardElevation(4.dp)) {
             Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Icon(Icons.Default.Lock, null, Modifier.size(58.dp), tint = Color(0xFFFFD166))
                 Text("RSS DATA RECOVERY", modifier = Modifier.align(Alignment.CenterHorizontally), color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
@@ -139,9 +150,9 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 @Composable private fun RegistrationScreen(done: (String, String) -> Unit) {
     var name by remember { mutableStateOf("") }; var email by remember { mutableStateOf("") }; var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(120); visible = true }
-    Box(Modifier.fillMaxSize()) { AnimatedBackdrop(); Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize()) { AnimatedBackdrop(); SoftBlurGlow(Modifier.align(Alignment.Center).size(330.dp), Color(0xFF2EA7FF)); Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         AnimatedVisibility(visible, enter=fadeIn(tween(450))+scaleIn(initialScale=.94f,animationSpec=tween(500))+slideInVertically(initialOffsetY={it/12},animationSpec=tween(500))) {
-            Card(Modifier.fillMaxWidth().padding(horizontal=22.dp,vertical=18.dp).shadow(3.dp,RoundedCornerShape(30.dp)),shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(containerColor=Color.White.copy(alpha=.06f)),elevation=CardDefaults.cardElevation(1.dp)) {
+            Card(Modifier.fillMaxWidth().padding(horizontal=22.dp,vertical=18.dp).shadow(3.dp,RoundedCornerShape(30.dp)),shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(containerColor=Color(0xFF102033)),elevation=CardDefaults.cardElevation(3.dp)) {
                 Column(Modifier.padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)) {
                     AnimatedVisibility(visible,enter=fadeIn(tween(550))+scaleIn(initialScale=.75f,animationSpec=tween(550))){androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(104.dp))}
                     Text("RSS DATA RECOVERY",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("CREATE YOUR PROFILE",color=Color.White,fontWeight=FontWeight.Bold)
@@ -156,9 +167,9 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 
 @Composable private fun WelcomeScreen(name:String,done:()->Unit){
     var visible by remember{mutableStateOf(false)};LaunchedEffect(Unit){delay(120);visible=true};val pulse=rememberInfiniteTransition(label="welcomePulse");val alpha by pulse.animateFloat(.72f,1f,infiniteRepeatable(tween(1100),RepeatMode.Reverse),label="welcomeAlpha")
-    Box(Modifier.fillMaxSize()){AnimatedBackdrop();Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){
+    Box(Modifier.fillMaxSize()){AnimatedBackdrop();SoftBlurGlow(Modifier.align(Alignment.Center).size(330.dp), Color(0xFFB7791F));Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){
         AnimatedVisibility(visible,enter=fadeIn(tween(500))+scaleIn(initialScale=.94f,animationSpec=tween(500))+slideInVertically(initialOffsetY={it/12},animationSpec=tween(500))){
-            Card(Modifier.fillMaxWidth().padding(horizontal=22.dp,vertical=18.dp),shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(containerColor=Color.White.copy(alpha=.06f)),elevation=CardDefaults.cardElevation(1.dp)){
+            Card(Modifier.fillMaxWidth().padding(horizontal=22.dp,vertical=18.dp),shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(containerColor=Color(0xFF102033)),elevation=CardDefaults.cardElevation(3.dp)){
                 Column(Modifier.padding(28.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)){
                     AnimatedVisibility(visible,enter=fadeIn(tween(650))+scaleIn(initialScale=.78f,animationSpec=tween(650))){androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(86.dp))}
                     Text("CONGRATULATIONS 👏🎉",color=Color(0xFFFFD166).copy(alpha=alpha),style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold)
@@ -242,21 +253,33 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                         )
                         .padding(14.dp)
                 ) {
-                    Column(Modifier.fillMaxSize()) {
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            androidx.compose.foundation.Image(
-                                painter = androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),
-                                contentDescription = "Razeen Secure Solution",
-                                modifier = Modifier.size(82.dp).clickable {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc")))
-                                }
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Text("RAZEEN SECURE SOLUTION", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                            Text("Mobile & PC Software • CCTV • Networking • System Administration", style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("077 115 5504  •  070 155 5504", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                            Text("rsscctvsolution@gmail.com", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                            Text("www.rsscctvsolution.eu.cc", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Box(Modifier.fillMaxSize()) {
+                        SoftBlurGlow(Modifier.align(Alignment.TopCenter).offset(y = 90.dp).size(300.dp), palettes[theme.coerceIn(0, palettes.lastIndex)][1])
+                        Column(Modifier.fillMaxSize()) {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(112.dp))
+                                Spacer(Modifier.height(6.dp))
+                                Text(name,fontWeight=FontWeight.ExtraBold,fontSize=16.sp,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+                                if(email.isNotBlank()) Text(email,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+                            }
+                            Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal=4.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
+                                GlassMenuItem("Home",Icons.Default.Home,Color(0xFF4F7CFF),page==Page.HOME){navigate(Page.HOME)}
+                                GlassMenuItem("App Features",Icons.Default.AutoAwesome,Color(0xFFFFB21A),page==Page.FEATURES){navigate(Page.FEATURES)}
+                                GlassMenuItem("Recovery",Icons.Default.Restore,Color(0xFFFF8A3D),page==Page.SCAN){mode=Mode.QUICK;category=null;navigate(Page.SCAN)}
+                                GlassMenuItem("Results",Icons.Default.Folder,Color(0xFF18B7A0),page==Page.RESULTS){navigate(Page.RESULTS)}
+                                GlassMenuItem("Premium",Icons.Default.Star,Color(0xFFFFB21A),page==Page.PREMIUM){navigate(Page.PREMIUM)}
+                                GlassMenuItem("Recovery History",Icons.Default.History,Color(0xFF9B5CFF),page==Page.HISTORY){navigate(Page.HISTORY)}
+                                GlassMenuItem("Settings",Icons.Default.Settings,Color(0xFF4F7CFF),page==Page.SETTINGS){navigate(Page.SETTINGS)}
+                            }
+                            Column(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),"Razeen Secure Solution",Modifier.size(76.dp).clickable{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.rsscctvsolution.eu.cc")))})
+                                Spacer(Modifier.height(2.dp))
+                                Text("RAZEEN SECURE SOLUTION",fontWeight=FontWeight.ExtraBold,fontSize=13.sp,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+                                Text("Mobile & PC Software • CCTV • Networking • System Administration",style=MaterialTheme.typography.labelSmall,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+                                Text("077 115 5504  •  070 155 5504",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+                                Text("rsscctvsolution@gmail.com",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+                                Text("www.rsscctvsolution.eu.cc",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+                            }
                         }
                     }
                 }
@@ -302,50 +325,19 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                 )
             },
             bottomBar = {
-                NavigationBar(
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .shadow(3.dp, RoundedCornerShape(24.dp))
-                        .border(
-                            1.dp,
-                            Color.White.copy(alpha = if (dark) .06f else .10f),
-                            RoundedCornerShape(24.dp)
-                        ),
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = if (dark) .055f else .94f),
-                    tonalElevation = 0.dp
-                ) {
-                    NavigationBarItem(
-                        selected = page == Page.HOME,
-                        onClick = { navigate(Page.HOME) },
-                        icon = { Icon(Icons.Default.Home, null, tint = Color(0xFF4F7CFF)) },
-                        label = { Text("Home") }
-                    )
-                    NavigationBarItem(
-                        selected = page == Page.SCAN,
-                        onClick = { mode = Mode.QUICK; category = null; navigate(Page.SCAN) },
-                        icon = { Icon(Icons.Default.Restore, null, tint = Color(0xFFFF8A3D)) },
-                        label = { Text("Recover") }
-                    )
-                    NavigationBarItem(
-                        selected = page == Page.RESULTS,
-                        onClick = { navigate(Page.RESULTS) },
-                        icon = { Icon(Icons.Default.Folder, null, tint = Color(0xFF18B7A0)) },
-                        label = { Text("Results") }
-                    )
-                    NavigationBarItem(
-                        selected = page == Page.PREMIUM,
-                        onClick = { navigate(Page.PREMIUM) },
-                        icon = { Icon(Icons.Default.Star, null, tint = Color(0xFFFFB21A)) },
-                        label = { Text("Premium") }
-                    )
-                    NavigationBarItem(
-                        selected = page == Page.SETTINGS,
-                        onClick = { navigate(Page.SETTINGS) },
-                        icon = { Icon(Icons.Default.Settings, null, tint = Color(0xFF9B5CFF)) },
-                        label = { Text("Settings") }
-                    )
+                Box(Modifier.padding(horizontal=12.dp,vertical=8.dp).clip(RoundedCornerShape(24.dp)).shadow(3.dp,RoundedCornerShape(24.dp))){
+                    Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.surface.copy(alpha=if(dark).78f else .90f),RoundedCornerShape(24.dp)).graphicsLayer{
+                        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.S) renderEffect=BlurEffect(18f,18f,TileMode.Clamp)
+                    })
+                    NavigationBar(modifier=Modifier.fillMaxWidth(),containerColor=Color.Transparent,tonalElevation=0.dp){
+                        NavigationBarItem(selected=page==Page.HOME,onClick={navigate(Page.HOME)},icon={Icon(Icons.Default.Home,null,tint=Color(0xFF4F7CFF))},label={Text("Home")})
+                        NavigationBarItem(selected=page==Page.SCAN,onClick={mode=Mode.QUICK;category=null;navigate(Page.SCAN)},icon={Icon(Icons.Default.Restore,null,tint=Color(0xFFFF8A3D))},label={Text("Recover")})
+                        NavigationBarItem(selected=page==Page.RESULTS,onClick={navigate(Page.RESULTS)},icon={Icon(Icons.Default.Folder,null,tint=Color(0xFF18B7A0))},label={Text("Results")})
+                        NavigationBarItem(selected=page==Page.PREMIUM,onClick={navigate(Page.PREMIUM)},icon={Icon(Icons.Default.Star,null,tint=Color(0xFFFFB21A))},label={Text("Premium")})
+                        NavigationBarItem(selected=page==Page.SETTINGS,onClick={navigate(Page.SETTINGS)},icon={Icon(Icons.Default.Settings,null,tint=Color(0xFF9B5CFF))},label={Text("Settings")})
+                    }
                 }
-            }
+            },
         ) { padding ->
             Box(
                 Modifier
@@ -371,7 +363,8 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                     Page.HOME -> HomeScreen(
                         { mode = Mode.QUICK; category = null; navigate(Page.SCAN) },
                         { mode = Mode.DEEP; category = null; navigate(Page.SCAN) },
-                        { navigate(Page.HISTORY) }
+                        { navigate(Page.HISTORY) },
+                        { navigate(Page.RESULTS) }
                     ) { category = it; mode = Mode.QUICK; navigate(Page.SCAN) }
 
                     Page.SCAN -> ScanScreen(
@@ -511,19 +504,19 @@ private fun pageTitle(page: Page, mode: Mode): String = when (page) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Text("APP FEATURES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("Everything available in RSS Data Recovery.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};items(features){item->Card(Modifier.fillMaxWidth().clickable{when(item.first){"Quick Recovery","Category Recovery"->onQuick();"Deep Recovery"->onDeep();"Results & Preview","Duplicate Detection"->onResults();"Premium Recovery"->onPremium()}}.shadow(2.dp,RoundedCornerShape(17.dp)),shape=RoundedCornerShape(17.dp),elevation=CardDefaults.cardElevation(1.dp)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(44.dp).background(item.third.copy(alpha=.12f),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){Icon(item.second,null,tint=item.third,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Text(item.first,Modifier.weight(1f),fontWeight=FontWeight.Bold);Icon(Icons.Default.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)}}}}
 }
 
-@Composable private fun HomeScreen(quick:()->Unit,deep:()->Unit,history:()->Unit,onCategory:(Category)->Unit){
+@Composable private fun HomeScreen(quick:()->Unit,deep:()->Unit,history:()->Unit,onResults:()->Unit,onCategory:(Category)->Unit){
     val context=LocalContext.current;var storage by remember{mutableStateOf(storageUsage(context))};LaunchedEffect(Unit){while(true){storage=storageUsage(context);delay(1500)}}
     LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(11.dp)){
         item{Text("RECOVER YOUR FILES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("SCAN, PREVIEW AND RECOVER SAFELY",style=MaterialTheme.typography.bodySmall)}
         item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(18.dp)),shape=RoundedCornerShape(18.dp),elevation=CardDefaults.cardElevation(1.dp)){Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Storage,null,tint=Color(0xFF4F7CFF));Spacer(Modifier.width(9.dp));Text("DEVICE STORAGE",fontWeight=FontWeight.Bold)};Text("${storage.first} USED  •  ${storage.second} FREE",style=MaterialTheme.typography.bodySmall);LinearProgressIndicator(progress={storage.third},modifier=Modifier.fillMaxWidth())}}}
         item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){ActionCard("Quick Recovery",Icons.Default.FlashOn,Color(0xFFE67E22),quick,Modifier.weight(1f));ActionCard("Deep Recovery",Icons.Default.Search,Color(0xFF8E44AD),deep,Modifier.weight(1f))}}
         item{Text("RECOVERY BY CATEGORY",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.ExtraBold)}
-        item{LazyVerticalGrid(GridCells.Fixed(2),Modifier.fillMaxWidth().height(295.dp),verticalArrangement=Arrangement.spacedBy(9.dp),horizontalArrangement=Arrangement.spacedBy(9.dp),userScrollEnabled=false){items(Category.values().toList()){cat->val info=categoryInfo(cat);ActionCard(info.first,info.second,info.third,{onCategory(cat)},Modifier.fillMaxWidth())}}}
-        item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(17.dp)),shape=RoundedCornerShape(17.dp)){Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Text("RECOVERY TOOLS",fontWeight=FontWeight.ExtraBold);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Safe preview",Icons.Default.Visibility,Color(0xFF4F7CFF),Modifier.weight(1f));ToolPill("Offline scan",Icons.Default.CloudOff,Color(0xFF18B7A0),Modifier.weight(1f))};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Duplicate check",Icons.Default.ContentCopy,Color(0xFFE67E22),Modifier.weight(1f));ToolPill("Recovery history",Icons.Default.History,Color(0xFF8E44AD),Modifier.weight(1f))}}}}
+        item{LazyVerticalGrid(GridCells.Fixed(2),Modifier.fillMaxWidth().height(250.dp),verticalArrangement=Arrangement.spacedBy(9.dp),horizontalArrangement=Arrangement.spacedBy(9.dp),userScrollEnabled=false){items(Category.values().toList()){cat->val info=categoryInfo(cat);ActionCard(info.first,info.second,info.third,{onCategory(cat)},Modifier.fillMaxWidth())}}}
+        item{Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)){Text("RECOVERY TOOLS",fontWeight=FontWeight.ExtraBold);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Safe preview",Icons.Default.Visibility,Color(0xFF4F7CFF),{onResults()},Modifier.weight(1f));ToolPill("Offline scan",Icons.Default.CloudOff,Color(0xFF18B7A0),{quick()},Modifier.weight(1f))};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Duplicate check",Icons.Default.ContentCopy,Color(0xFFE67E22),{onResults()},Modifier.weight(1f));ToolPill("Recovery history",Icons.Default.History,Color(0xFF8E44AD),{history()},Modifier.weight(1f))}}}
         item{OutlinedButton(onClick=history,Modifier.fillMaxWidth()){Icon(Icons.Default.History,null);Spacer(Modifier.width(6.dp));Text("RECOVERY HISTORY")}}
     }
 }
-@Composable private fun ToolPill(title:String,icon:ImageVector,tint:Color,modifier:Modifier=Modifier){Row(modifier.fillMaxWidth().background(tint.copy(alpha=.08f),RoundedCornerShape(13.dp)).padding(horizontal=10.dp,vertical=9.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon, null, Modifier.size(19.dp), tint);Spacer(Modifier.width(7.dp));Text(title,style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.SemiBold)}}
+@Composable private fun ToolPill(title:String,icon:ImageVector,tint:Color,onClick:()->Unit,modifier:Modifier=Modifier){Row(modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).clickable(onClick=onClick).background(tint.copy(alpha=.08f),RoundedCornerShape(13.dp)).padding(horizontal=10.dp,vertical=9.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon,null,Modifier.size(19.dp),tint);Spacer(Modifier.width(7.dp));Text(title,style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.SemiBold)}}
 
 
 private fun categoryInfo(category: Category): Triple<String, ImageVector, Color> = when (category) {
@@ -795,10 +788,7 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
         }
     }
 
-@Composable private fun PremiumScreen(active:Boolean,onUpgrade:()->Unit){
-    val rows=listOf(Triple("Quick image recovery",true,true),Triple("Deep recovery engine",false,true),Triple("Audio & video recovery",false,true),Triple("Documents & files",false,true),Triple("Original file names",false,true),Triple("Original metadata",false,true),Triple("Original quality",false,true),Triple("Large batch recovery",false,true),Triple("Advanced duplicate detection",false,true),Triple("Priority recovery",false,true),Triple("Recovery destination control",true,true),Triple("Recovery history",true,true),Triple("App lock & biometric",true,true))
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Card(Modifier.fillMaxWidth().shadow(3.dp,RoundedCornerShape(22.dp)),shape=RoundedCornerShape(22.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer)){Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Text(if(active)"PREMIUM ACTIVE"else"RSS DATA RECOVERY PREMIUM",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text(if(active)"All recovery capabilities are unlocked."else"Unlock the complete recovery toolkit.",fontWeight=FontWeight.SemiBold);if(!active)Button(onClick=onUpgrade,Modifier.fillMaxWidth()){Icon(Icons.Default.Star,null);Spacer(Modifier.width(7.dp));Text("UPGRADE NOW")}}}};item{Text("FEATURE COMPARISON",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.ExtraBold)};item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(18.dp)),shape=RoundedCornerShape(18.dp)){Column(Modifier.fillMaxWidth().padding(12.dp)){Row(Modifier.fillMaxWidth().padding(bottom=8.dp),verticalAlignment=Alignment.CenterVertically){Text("FEATURE",Modifier.weight(1f),fontWeight=FontWeight.Bold);Text("FREE",Modifier.width(55.dp),fontWeight=FontWeight.Bold);Text("PRO",Modifier.width(55.dp),fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary)};rows.forEach{(label,free,pro)->Row(Modifier.fillMaxWidth().padding(vertical=7.dp),verticalAlignment=Alignment.CenterVertically){Text(label,Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium);Icon(if(free)Icons.Default.CheckCircle else Icons.Default.Lock,null,Modifier.width(55.dp).size(20.dp),tint=if(free)Color(0xFF27AE60)else Color(0xFF8A94A6));Icon(if(pro)Icons.Default.CheckCircle else Icons.Default.Lock,null,Modifier.width(55.dp).size(20.dp),tint=Color(0xFFFFB21A))}}}}}}
-}
+@Composable private fun PremiumScreen(active:Boolean,onUpgrade:()->Unit){val rows=listOf(Triple("Quick image recovery",true,true),Triple("Deep recovery engine",false,true),Triple("Audio & video recovery",false,true),Triple("Documents & files",false,true),Triple("Original file names",false,true),Triple("Original metadata",false,true),Triple("Original quality",false,true),Triple("Large batch recovery",false,true),Triple("Advanced duplicate detection",false,true),Triple("Priority recovery",false,true),Triple("Recovery destination control",true,true),Triple("Recovery history",true,true),Triple("App lock & biometric",true,true));LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Text("FEATURE COMPARISON",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("FREE vs PRO recovery capabilities",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(18.dp)),shape=RoundedCornerShape(18.dp)){Column(Modifier.fillMaxWidth().padding(12.dp)){Row(Modifier.fillMaxWidth().padding(bottom=8.dp),verticalAlignment=Alignment.CenterVertically){Text("FEATURE",Modifier.weight(1f),fontWeight=FontWeight.Bold);Text("FREE",Modifier.width(55.dp),fontWeight=FontWeight.Bold);Text("PRO",Modifier.width(55.dp),fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary)};rows.forEach{(label,free,pro)->Row(Modifier.fillMaxWidth().padding(vertical=7.dp),verticalAlignment=Alignment.CenterVertically){Text(label,Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium);Icon(if(free)Icons.Default.CheckCircle else Icons.Default.Lock,null,Modifier.width(55.dp).size(20.dp),tint=if(free)Color(0xFF27AE60)else Color(0xFF8A94A6));Icon(if(pro)Icons.Default.CheckCircle else Icons.Default.Lock,null,Modifier.width(55.dp).size(20.dp),tint=Color(0xFFFFB21A))}}}}};item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(20.dp)),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer)){Column(Modifier.fillMaxWidth().padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)){Icon(Icons.Default.Star,null,Modifier.size(38.dp),tint=Color(0xFFFFB21A));Text(if(active)"PREMIUM ACTIVE" else "RSS DATA RECOVERY PREMIUM",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.ExtraBold);Text(if(active)"All recovery capabilities are unlocked." else "Unlock the complete recovery toolkit.",fontWeight=FontWeight.SemiBold,textAlign=androidx.compose.ui.text.style.TextAlign.Center);if(!active)Button(onClick=onUpgrade,Modifier.fillMaxWidth()){Text("UPGRADE NOW")}}}}}}}
 
 @Composable private fun HistoryScreen(prefs: SharedPreferences) {
     val lastScan = prefs.getString("last_scan", null)
@@ -832,12 +822,12 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
 }
 
 @Composable private fun SettingsScreen(prefs:SharedPreferences,dark:Boolean,onDarkChange:(Boolean)->Unit,theme:Int,onThemeChange:(Int)->Unit){
-    val context=LocalContext.current;var lock by remember{mutableStateOf(prefs.getBoolean("app_lock",false))};var showPinDialog by remember{mutableStateOf(false)};var pin by remember{mutableStateOf("")};var haptics by remember{mutableStateOf(prefs.getBoolean("haptics",true))};var notifications by remember{mutableStateOf(prefs.getBoolean("notifications",true))}
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(22.dp)),shape=RoundedCornerShape(22.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)){Column(Modifier.fillMaxWidth().padding(vertical=18.dp),horizontalAlignment=Alignment.CenterHorizontally){androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(64.dp));Spacer(Modifier.height(8.dp));Text("RSS DATA RECOVERY",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.ExtraBold);Text("SETTINGS",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}}};item{SettingSwitch("DARK APPEARANCE",dark,onDarkChange)};item{SettingSwitch("APP LOCK / BIOMETRIC",lock){lock=it;prefs.edit().putBoolean("app_lock",it).apply()}};item{Button(onClick={pin="";showPinDialog=true},Modifier.fillMaxWidth()){Icon(Icons.Default.Password,null);Spacer(Modifier.width(7.dp));Text(if(prefs.getBoolean("pin_enabled",false))"CHANGE APP PIN"else"SET APP PIN")}};item{SettingSwitch("HAPTIC FEEDBACK",haptics){haptics=it;prefs.edit().putBoolean("haptics",it).apply()}};item{SettingSwitch("SCAN NOTIFICATIONS",notifications){notifications=it;prefs.edit().putBoolean("notifications",it).apply()}};item{Card(Modifier.fillMaxWidth().shadow(1.dp,RoundedCornerShape(16.dp))){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.DeleteSweep,null,tint=Color(0xFFE74C3C));Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)){Text("CLEAR RECOVERY HISTORY",fontWeight=FontWeight.Bold);Text("Remove saved scan and recovery activity.",style=MaterialTheme.typography.bodySmall)};TextButton(onClick={prefs.edit().remove("recovery_history").remove("last_scan").remove("last_count").apply()}){Text("CLEAR")}}}};item{Text("COLOR THEME",fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp))};item{Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){palettes.forEachIndexed{idx,colors->Button(onClick={onThemeChange(idx)},colors=ButtonDefaults.buttonColors(containerColor=colors[0])){Text(if(idx==theme)"✓"else"${idx+1}")}}}};item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(16.dp))){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){Text("PRIVACY & SAFETY",fontWeight=FontWeight.Bold);Text("SCANNING STAYS ON THE DEVICE AND USES ANDROID STORAGE PERMISSIONS.",style=MaterialTheme.typography.bodySmall)}}};item{Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=14.dp),horizontalAlignment=Alignment.CenterHorizontally){androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),"Razeen Secure Solution",Modifier.size(96.dp).clickable{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.rsscctvsolution.eu.cc")))});Spacer(Modifier.height(8.dp));Text("RAZEEN SECURE SOLUTION",fontWeight=FontWeight.ExtraBold);Text("Mobile & PC Software • CCTV Camera Installation • Networking • System Administration",style=MaterialTheme.typography.bodySmall,textAlign=androidx.compose.ui.text.style.TextAlign.Center);Text("077 115 5504  •  070 155 5504",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary);Text("rsscctvsolution@gmail.com",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary);Text("www.rsscctvsolution.eu.cc",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary)}}}
+    val context=LocalContext.current;var lock by remember{mutableStateOf(prefs.getBoolean("app_lock",false))};var showPinDialog by remember{mutableStateOf(false)};var pin by remember{mutableStateOf("")};var haptics by remember{mutableStateOf(prefs.getBoolean("haptics",true))};var notifications by remember{mutableStateOf(prefs.getBoolean("notifications",true))};var autoScan by remember{mutableStateOf(prefs.getBoolean("auto_scan",false))};var confirmRecovery by remember{mutableStateOf(prefs.getBoolean("confirm_recovery",true))};var previews by remember{mutableStateOf(prefs.getBoolean("previews",true))};var saveHistory by remember{mutableStateOf(prefs.getBoolean("save_history",true))}
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(22.dp)),shape=RoundedCornerShape(22.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)){Column(Modifier.fillMaxWidth().padding(vertical=18.dp),horizontalAlignment=Alignment.CenterHorizontally){androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(64.dp));Spacer(Modifier.height(8.dp));Text("RSS DATA RECOVERY",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.ExtraBold);Text("SETTINGS",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}}};item{SettingSwitch("DARK APPEARANCE",dark,onDarkChange)};item{SettingSwitch("APP LOCK / BIOMETRIC",lock){lock=it;prefs.edit().putBoolean("app_lock",it).apply()}};item{Button(onClick={pin="";showPinDialog=true},Modifier.fillMaxWidth()){Icon(Icons.Default.Password,null);Spacer(Modifier.width(7.dp));Text(if(prefs.getBoolean("pin_enabled",false))"CHANGE APP PIN"else"SET APP PIN")}};item{SettingSwitch("HAPTIC FEEDBACK",haptics){haptics=it;prefs.edit().putBoolean("haptics",it).apply()}};item{SettingSwitch("SCAN NOTIFICATIONS",notifications){notifications=it;prefs.edit().putBoolean("notifications",it).apply()}};item{SettingSwitch("AUTO SCAN ON LAUNCH",autoScan){autoScan=it;prefs.edit().putBoolean("auto_scan",it).apply()}};item{SettingSwitch("CONFIRM BEFORE RECOVERY",confirmRecovery){confirmRecovery=it;prefs.edit().putBoolean("confirm_recovery",it).apply()}};item{SettingSwitch("SHOW FILE PREVIEWS",previews){previews=it;prefs.edit().putBoolean("previews",it).apply()}};item{SettingSwitch("SAVE RECOVERY HISTORY",saveHistory){saveHistory=it;prefs.edit().putBoolean("save_history",it).apply()}};item{Card(Modifier.fillMaxWidth().shadow(1.dp,RoundedCornerShape(16.dp))){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.DeleteSweep,null,tint=Color(0xFFE74C3C));Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)){Text("CLEAR RECOVERY HISTORY",fontWeight=FontWeight.Bold);Text("Remove saved scan and recovery activity.",style=MaterialTheme.typography.bodySmall)};TextButton(onClick={prefs.edit().remove("recovery_history").remove("last_scan").remove("last_count").apply()}){Text("CLEAR")}}}};item{Text("COLOR THEME",fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp))};item{Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){palettes.forEachIndexed{idx,colors->Button(onClick={onThemeChange(idx)},colors=ButtonDefaults.buttonColors(containerColor=colors[0])){Text(if(idx==theme)"✓"else"${idx+1}")}}}};item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(16.dp))){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){Text("PRIVACY & SAFETY",fontWeight=FontWeight.Bold);Text("SCANNING STAYS ON THE DEVICE AND USES ANDROID STORAGE PERMISSIONS.",style=MaterialTheme.typography.bodySmall)}}};item{Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally){androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),"Razeen Secure Solution",Modifier.size(96.dp).clickable{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.rsscctvsolution.eu.cc")))});Spacer(Modifier.height(2.dp));Text("RAZEEN SECURE SOLUTION",fontWeight=FontWeight.ExtraBold);Text("Mobile & PC Software • CCTV Camera Installation • Networking • System Administration",style=MaterialTheme.typography.bodySmall,textAlign=androidx.compose.ui.text.style.TextAlign.Center);Text("077 115 5504  •  070 155 5504",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary);Text("rsscctvsolution@gmail.com",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary);Text("www.rsscctvsolution.eu.cc",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary)}}}
     if(showPinDialog){AlertDialog(onDismissRequest={showPinDialog=false},title={Text(if(prefs.getBoolean("pin_enabled",false))"CHANGE APP PIN"else"SET APP PIN")},text={OutlinedTextField(value=pin,onValueChange={v->if(v.length<=6&&v.all(Char::isDigit))pin=v},modifier=Modifier.fillMaxWidth(),label={Text("6-DIGIT PIN")},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword))},confirmButton={TextButton(enabled=pin.length==6,onClick={prefs.edit().putString("pin_hash",hashPin(pin)).putBoolean("pin_enabled",true).putBoolean("app_lock",true).apply();lock=true;showPinDialog=false;pin=""}){Text("SAVE")}},dismissButton={TextButton(onClick={showPinDialog=false}){Text("CANCEL")}})}
 }
 
-@Composable private fun SettingSwitch(title: String, value: Boolean, onChange: (Boolean) -> Unit) { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text(title, Modifier.weight(1f), fontWeight = FontWeight.Medium); Switch(checked = value, onCheckedChange = onChange) } }
+@Composable private fun SettingSwitch(title: String, value: Boolean, onChange: (Boolean) -> Unit) { val icon=when{title.contains("DARK")->Icons.Default.DarkMode;title.contains("LOCK")->Icons.Default.Lock;title.contains("HAPTIC")->Icons.Default.Vibration;title.contains("NOTIFICATION")->Icons.Default.Notifications;title.contains("AUTO")->Icons.Default.PlayCircle;title.contains("CONFIRM")->Icons.Default.Verified;title.contains("PREVIEW")->Icons.Default.Visibility;else->Icons.Default.History};val tint=when{title.contains("DARK")->Color(0xFF8E6CFF);title.contains("LOCK")->Color(0xFFE74C3C);title.contains("HAPTIC")->Color(0xFF18B7A0);title.contains("NOTIFICATION")->Color(0xFFFFB21A);title.contains("AUTO")->Color(0xFF4F7CFF);title.contains("CONFIRM")->Color(0xFF27AE60);title.contains("PREVIEW")->Color(0xFF9B5CFF);else->Color(0xFF2980B9)};Row(Modifier.fillMaxWidth().padding(vertical=4.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon,null,Modifier.size(24.dp),tint=tint);Spacer(Modifier.width(10.dp));Text(title,Modifier.weight(1f),fontWeight=FontWeight.Medium);Switch(checked=value,onCheckedChange=onChange)}}
 
 private fun hashPin(pin: String): String = MessageDigest.getInstance("SHA-256").digest(pin.toByteArray()).joinToString("") { it.toString(16).padStart(2, '0') }
 
