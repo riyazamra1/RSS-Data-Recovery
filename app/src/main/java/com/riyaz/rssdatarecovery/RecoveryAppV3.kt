@@ -27,7 +27,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clip
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -714,7 +714,7 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
                     scanJob = scope.launch {
                         try {
                             val result = queryFiles(context, category)
-                            for (i in 1..24) { kotlinx.coroutines.currentCoroutineContext().ensureActive(); while (paused) { kotlinx.coroutines.ensureActive(); delay(100) }; delay(if (mode == Mode.DEEP) 55 else 30); setProgress(i / 24f) }
+                            for (i in 1..24) { kotlinx.coroutines.currentCoroutineContext().let { kotlinx.coroutines.ensureActive(it) }; while (paused) { kotlinx.coroutines.ensureActive(); delay(100) }; delay(if (mode == Mode.DEEP) 55 else 30); setProgress(i / 24f) }
                             prefs.edit().putString("last_scan", DateFormat.getDateTimeInstance().format(Date())).putInt("last_count", result.size).apply()
                             setScanning(false)
                             done(result)
