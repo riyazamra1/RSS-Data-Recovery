@@ -1,7 +1,5 @@
 package com.riyaz.rssdatarecovery
 
-import android.content.Context
-import android.provider.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -30,39 +28,33 @@ internal data class RssCoreStatus(
 )
 
 internal object RssCoreClient {
-    suspend fun register(context: Context, name: String, email: String): RssCoreRegistration =
-        withContext(Dispatchers.IO) {
-            val deviceId = Settings.Secure.getString(
-                context.contentResolver,
-                Settings.Secure.ANDROID_ID
-            ).orEmpty()
+    suspend fun register(name: String, email: String): RssCoreRegistration = withContext(Dispatchers.IO) {
+        val json = JSONObject()
+            .put("email", email)
+            .put("display_name", name)
 
-            val json = JSONObject()
-                .put("email", email)
-                .put("display_name", name)
-
-            request(
-                path = "/api/v1/recovery/register",
-                method = "POST",
-                body = json.toString()
-            ).let { response ->
-                if (response.code !in 200..299) {
-                    throw IllegalStateException("RSS Core registration failed (HTTP ${response.code})")
-                }
-                val body = JSONObject(response.body)
-                RssCoreRegistration(
-                    ok = body.optBoolean("ok", false),
-                    customerEmail = body.optJSONObject("user")?.optString("email")?.takeIf { it.isNotBlank() },
-                    displayName = body.optJSONObject("user")?.optString("display_name")?.takeIf { it.isNotBlank() }
-                )
+        request(
+            path = "/api/v1/recovery/register",
+            method = "POST",
+            body = json.toString()
+        ).let { response ->
+            if (response.code !in 200..299) {
+                throw IllegalStateException("RSS Core registration failed (HTTP " + response.code + ")")
             }
+            val body = JSONObject(response.body)
+            RssCoreRegistration(
+                ok = body.optBoolean("ok", false),
+                customerEmail = body.optJSONObject("user")?.optString("email")?.takeIf { it.isNotBlank() },
+                displayName = body.optJSONObject("user")?.optString("display_name")?.takeIf { it.isNotBlank() }
+            )
         }
+    }
 
     suspend fun status(): RssCoreStatus = withContext(Dispatchers.IO) {
         runCatching {
             val response = request("/api/v1/status", "GET")
             if (response.code !in 200..299) {
-                return@runCatching RssCoreStatus(false, null, null, null, null, null, "HTTP ${response.code}")
+                return@runCatching RssCoreStatus(false, null, null, null, null, null, "HTTP " + response.code)
             }
             val body = JSONObject(response.body)
             RssCoreStatus(
