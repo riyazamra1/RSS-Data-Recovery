@@ -294,13 +294,8 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                     Modifier
                         .fillMaxSize()
                         .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    paletteGlass(theme, dark, 0.055f),
-                                    Color.White.copy(alpha = if (dark) 0.02f else 0.035f),
-                                    paletteGlass(theme, dark, 0.04f)
-                                )
-                            )
+                            Color.White.copy(alpha = if (dark) 0.94f else 0.94f)
+                                .compositeOver(paletteGlass(theme, dark, 0.06f))
                         )
                         .padding(14.dp)
                 ) {
