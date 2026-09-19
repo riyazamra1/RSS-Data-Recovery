@@ -43,6 +43,9 @@ class MainActivity : FragmentActivity() {
         val prefs = getSharedPreferences("rss_recovery", MODE_PRIVATE)
         if (prefs.getBoolean("app_lock", false) && prefs.getBoolean("registered", false) && prefs.getBoolean("welcome_done", false) && !authenticated) {
             appLocked = true
+            if (prefs.getBoolean("biometric_enabled", false)) {
+                window.decorView.post { authenticate() }
+            }
         }
     }
 
