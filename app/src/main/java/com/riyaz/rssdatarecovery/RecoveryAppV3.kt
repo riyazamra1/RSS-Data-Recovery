@@ -294,8 +294,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                     Modifier
                         .fillMaxSize()
                         .background(
-                            Color.White.copy(alpha = if (dark) 0.94f else 0.94f)
-                                .compositeOver(paletteGlass(theme, dark, 0.06f))
+                            palettes[theme.coerceIn(0, palettes.lastIndex)][0].copy(alpha = 0.06f)
                         )
                         .padding(14.dp)
                 ) {
