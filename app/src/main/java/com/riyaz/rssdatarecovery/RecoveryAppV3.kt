@@ -7,9 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
-import androidx.fragment.app.FragmentActivity
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -125,58 +122,45 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
 }
 
 @Composable private fun LockScreen(prefs: SharedPreferences, onUnlock: () -> Unit, onPinUnlock: (String) -> Unit, onForgotPin: () -> Unit) {
-    val context = LocalContext.current
-    val biometricEnabled = prefs.getBoolean("biometric_enabled", false)
-    var biometricError by remember { mutableStateOf<String?>(null) }
-    fun launchBiometric() {
-        val activity = context as? FragmentActivity ?: return
-        val manager = BiometricManager.from(activity)
-        if (manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS) {
-            val executor = ContextCompat.getMainExecutor(activity)
-            val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { biometricError = null; onUnlock() }
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) { biometricError = errString.toString() }
-                override fun onAuthenticationFailed() { biometricError = "Biometric not recognized. Try again or use your PIN." }
-            })
-            prompt.authenticate(
-                BiometricPrompt.PromptInfo.Builder()
-                    .setTitle("RSS Data Recovery")
-                    .setSubtitle("Unlock with biometrics")
-                    .setDescription("Use your fingerprint or supported biometric to unlock.")
-                    .setNegativeButtonText("Use PIN")
-                    .build()
-            )
-        } else biometricError = "Biometric authentication is not available. Use your PIN."
-    }
-    LaunchedEffect(biometricEnabled) {
-        if (biometricEnabled) {
-            delay(250)
-            launchBiometric()
-        }
-    }
     Box(Modifier.fillMaxSize()) {
         AnimatedBackdrop()
         SoftBlurGlow(Modifier.align(Alignment.Center).size(320.dp), Color(0xFF8B5CF6))
-        Card(Modifier.fillMaxWidth().padding(24.dp).align(Alignment.Center), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF102033)), elevation = CardDefaults.cardElevation(4.dp)) {
-            Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Card(
+            Modifier.fillMaxWidth().padding(24.dp).align(Alignment.Center),
+            shape = RoundedCornerShape(30.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF102033)),
+            elevation = CardDefaults.cardElevation(4.dp)
+        ) {
+            Column(
+                Modifier.padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 Icon(Icons.Default.Lock, null, Modifier.size(58.dp), tint = Color(0xFFFFD166))
-                Text("RSS DATA RECOVERY", modifier = Modifier.align(Alignment.CenterHorizontally), color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 Text("APP LOCKED", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 if (prefs.getBoolean("pin_enabled", false)) {
                     var pin by remember { mutableStateOf("") }
                     Text("ENTER YOUR 6-DIGIT PIN", color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
-                    OutlinedTextField(value = pin, onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin = it }, modifier = Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN", color = Color.White) }, singleLine = true, textStyle = LocalTextStyle.current.copy(color = Color.White), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    Button(onClick = { if (pin.length == 6) onPinUnlock(pin) }, modifier = Modifier.fillMaxWidth(), enabled = pin.length == 6) { Text("UNLOCK WITH PIN") }
-                }
-                if (biometricError != null) Text(biometricError!!, color = Color(0xFFFFB4AB), style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                if (!biometricEnabled) {
-                    Button(onClick = { launchBiometric() }, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Fingerprint, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("UNLOCK WITH BIOMETRIC")
+                    OutlinedTextField(
+                        value = pin,
+                        onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("6-DIGIT PIN", color = Color.White) },
+                        singleLine = true,
+                        textStyle = LocalTextStyle.current.copy(color = Color.White),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
+                    )
+                    Button(onClick = { if (pin.length == 6) onPinUnlock(pin) }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.LockOpen, null)
+                        Spacer(Modifier.width(7.dp))
+                        Text("UNLOCK WITH PIN")
                     }
+                    TextButton(onClick = onForgotPin) { Text("FORGOT PIN", color = Color.White) }
+                } else {
+                    Text("BIOMETRIC UNLOCK IS ACTIVE", color = Color.White.copy(alpha = 0.85f))
+                    Text("Follow the biometric prompt to unlock.", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                 }
-                if (prefs.getBoolean("pin_enabled", false)) TextButton(onClick = onForgotPin) { Text("FORGOT PIN?") }
             }
         }
     }
