@@ -354,50 +354,16 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 
                         Spacer(Modifier.weight(1f))
 
-                        // Bottom RSS branding uses the original transparent company logo.
-                        GlassPanel(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    context.startActivity(
-                                        Intent(
-                                            Intent.ACTION_VIEW,
-                                            Uri.parse("https://www.rsscctvsolution.eu.cc")
-                                        )
-                                    )
-                                },
-                            radius = 24.dp,
-                            alpha = if (dark) 0.055f else 0.06f
-                        ) {
-                            Row(
-                                Modifier.padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                androidx.compose.foundation.Image(
-                                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),
-                                    contentDescription = "Razeen Secure Solution",
-                                    modifier = Modifier.size(52.dp)
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        "RAZEEN SECURE SOLUTION",
-                                        fontWeight = FontWeight.ExtraBold,
-                                        fontSize = 15.sp
-                                    )
-                                    Text(
-                                        "Mobile & PC Software • CCTV • Networking",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        "www.rsscctvsolution.eu.cc",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                Icon(Icons.Default.OpenInNew, null, tint = MaterialTheme.colorScheme.primary)
-                            }
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("RAZEEN SECURE SOLUTION", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Text("Mobile & PC Software • CCTV • Networking • System Administration", style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("077 115 5504  •  070 155 5504", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Text("rsscctvsolution@gmail.com", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Text("www.rsscctvsolution.eu.cc", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Spacer(Modifier.height(6.dp))
+                            androidx.compose.foundation.Image(painter = androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo), contentDescription = "Razeen Secure Solution", modifier = Modifier.size(60.dp).clickable {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc")))
+                            })
                         }
                     }
                 }
@@ -446,13 +412,13 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                 NavigationBar(
                     modifier = Modifier
                         .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .shadow(12.dp, RoundedCornerShape(24.dp))
+                        .shadow(3.dp, RoundedCornerShape(24.dp))
                         .border(
                             1.dp,
-                            Color.White.copy(alpha = if (dark) .18f else .55f),
+                            Color.White.copy(alpha = if (dark) .06f else .10f),
                             RoundedCornerShape(24.dp)
                         ),
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = if (dark) .20f else .72f),
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = if (dark) .055f else .94f),
                     tonalElevation = 0.dp
                 ) {
                     NavigationBarItem(
@@ -472,6 +438,12 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                         onClick = { navigate(Page.RESULTS) },
                         icon = { Icon(Icons.Default.Folder, null, tint = Color(0xFF18B7A0)) },
                         label = { Text("Results") }
+                    )
+                    NavigationBarItem(
+                        selected = page == Page.PREMIUM,
+                        onClick = { navigate(Page.PREMIUM) },
+                        icon = { Icon(Icons.Default.Star, null, tint = Color(0xFFFFB21A)) },
+                        label = { Text("Premium") }
                     )
                     NavigationBarItem(
                         selected = page == Page.SETTINGS,
@@ -520,6 +492,13 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                         { result -> files = result; count = result.size; navigate(Page.RESULTS) },
                         scope,
                         prefs
+                    )
+
+                    Page.FEATURES -> FeaturesScreen(
+                        onQuick = { mode = Mode.QUICK; category = null; navigate(Page.SCAN) },
+                        onDeep = { mode = Mode.DEEP; category = null; navigate(Page.SCAN) },
+                        onResults = { navigate(Page.RESULTS) },
+                        onPremium = { navigate(Page.PREMIUM) }
                     )
 
                     Page.RESULTS -> ResultsScreen(
@@ -630,7 +609,32 @@ private fun paletteGlass(theme: Int, dark: Boolean, alpha: Float): Color {
 }
 
 private fun pageTitle(page: Page, mode: Mode): String = when (page) {
-    Page.HOME -> "Home"; Page.SCAN -> if (mode == Mode.QUICK) "Quick Recovery" else "Deep Recovery"; Page.RESULTS -> "Results"; Page.PREMIUM -> "Premium"; Page.SETTINGS -> "Settings"; Page.HISTORY -> "Recovery History"
+    Page.HOME -> "Home"; Page.FEATURES -> "App Features"; Page.SCAN -> if (mode == Mode.QUICK) "Quick Recovery" else "Deep Recovery"; Page.RESULTS -> "Results"; Page.PREMIUM -> "Premium"; Page.SETTINGS -> "Settings"; Page.HISTORY -> "Recovery History"
+}
+
+@Composable private fun FeaturesScreen(onQuick: () -> Unit, onDeep: () -> Unit, onResults: () -> Unit, onPremium: () -> Unit) {
+    val features = listOf(
+        Triple("Quick Recovery", Icons.Default.FlashOn, Color(0xFFE67E22)),
+        Triple("Deep Recovery", Icons.Default.Search, Color(0xFF8E44AD)),
+        Triple("Category Recovery", Icons.Default.Category, Color(0xFF18B7A0)),
+        Triple("Results & Preview", Icons.Default.Folder, Color(0xFF4F7CFF)),
+        Triple("Recovery History", Icons.Default.History, Color(0xFF9B5CFF)),
+        Triple("App Lock & PIN", Icons.Default.Lock, Color(0xFFE74C3C)),
+        Triple("Premium Recovery", Icons.Default.Star, Color(0xFFFFB21A))
+    )
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item { Text("APP FEATURES", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold); Text("Recovery tools and controls available in this app.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        items(features) { item ->
+            Card(Modifier.fillMaxWidth().clickable {
+                when(item.first) { "Quick Recovery" -> onQuick(); "Deep Recovery" -> onDeep(); "Results & Preview" -> onResults(); "Premium Recovery" -> onPremium() }
+            }, elevation = CardDefaults.cardElevation(1.dp)) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(44.dp).background(item.third.copy(alpha = .12f), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) { Icon(item.second, null, Modifier.size(24.dp), tint = item.third) }
+                    Spacer(Modifier.width(12.dp)); Text(item.first, Modifier.weight(1f), fontWeight = FontWeight.Bold); Icon(Icons.Default.ChevronRight, null)
+                }
+            }
+        }
+    }
 }
 
 @Composable private fun HomeScreen(quick: () -> Unit, deep: () -> Unit, history: () -> Unit, onCategory: (Category) -> Unit) {
