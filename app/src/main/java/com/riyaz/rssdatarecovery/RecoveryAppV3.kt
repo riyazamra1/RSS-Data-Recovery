@@ -296,9 +296,9 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    paletteGlass(theme, dark, 0.06f),
-                                    Color.White.copy(alpha = if (dark) 0.025f else 0.04f),
-                                    paletteGlass(theme, dark, 0.045f)
+                                    paletteGlass(theme, dark, 0.055f),
+                                    Color.White.copy(alpha = if (dark) 0.02f else 0.035f),
+                                    paletteGlass(theme, dark, 0.04f)
                                 )
                             )
                         )
