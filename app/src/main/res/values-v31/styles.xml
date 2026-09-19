@@ -1,7 +1,7 @@
 <resources>
     <style name="Theme.RSSDataRecovery.Splash" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowSplashScreenBackground">#F7F7F5</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/rss_data_recovery_logo</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/rss_splash_adaptive</item>
         <item name="android:windowSplashScreenAnimationDuration">350</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
     </style>
