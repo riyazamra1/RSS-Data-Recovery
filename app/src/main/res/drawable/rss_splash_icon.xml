@@ -1,10 +1,9 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Inset the artwork so Android 12+ system splash does not render the logo oversized. -->
+    <!-- Constrain the artwork to a compact centered 64dp splash icon. -->
     <item
-        android:left="58dp"
-        android:top="58dp"
-        android:right="58dp"
-        android:bottom="58dp">
+        android:width="64dp"
+        android:height="64dp"
+        android:gravity="center">
         <bitmap
             android:src="@drawable/rss_data_recovery_splash_logo"
             android:gravity="center"
