@@ -701,7 +701,13 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
                 }, modifier = Modifier.fillMaxWidth()) { Text("START SCAN") }
             }
         } } }
-        item { Text(if (mode == Mode.DEEP) "FREE USERS CAN SCAN AND VIEW FILES. RECOVERY REQUIRES PREMIUM." else "FREE USERS CAN RECOVER IMAGES ONLY WITH A NEW NAME AND REDUCED QUALITY.", style = MaterialTheme.typography.bodySmall) }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = mode == Mode.QUICK, onClick = { setScanning(false); setProgress(0f) }, label = { Text("QUICK RECOVERY") })
+                FilterChip(selected = mode == Mode.DEEP, onClick = { setScanning(false); setProgress(0f) }, label = { Text("DEEP RECOVERY") })
+            }
+            Text(if (mode == Mode.DEEP) "Deep scan searches more file types. Premium is required to recover non-image files." else "Quick recovery supports supported images for free.", style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 
@@ -740,7 +746,7 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
-            Text("\${visible.size} FILES FOUND", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+            Text("${visible.size} FILES FOUND", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
             OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), label = { Text("SEARCH FILES") }, singleLine = true)
         }
         item {
