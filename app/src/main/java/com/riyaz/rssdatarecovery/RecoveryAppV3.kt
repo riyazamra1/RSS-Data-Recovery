@@ -44,6 +44,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -713,7 +714,7 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
                     scanJob = scope.launch {
                         try {
                             val result = queryFiles(context, category)
-                            for (i in 1..24) { kotlinx.coroutines.ensureActive(); while (paused) { kotlinx.coroutines.ensureActive(); delay(100) }; delay(if (mode == Mode.DEEP) 55 else 30); setProgress(i / 24f) }
+                            for (i in 1..24) { kotlinx.coroutines.currentCoroutineContext().ensureActive(); while (paused) { kotlinx.coroutines.ensureActive(); delay(100) }; delay(if (mode == Mode.DEEP) 55 else 30); setProgress(i / 24f) }
                             prefs.edit().putString("last_scan", DateFormat.getDateTimeInstance().format(Date())).putInt("last_count", result.size).apply()
                             setScanning(false)
                             done(result)
