@@ -165,7 +165,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                         androidx.compose.foundation.Image(
                             painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
                             contentDescription = "RSS Data Recovery",
-                            modifier = Modifier.size(78.dp).align(Alignment.CenterHorizontally)
+                            modifier = Modifier.size(104.dp).align(Alignment.CenterHorizontally)
                         )
                     }
                     Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
@@ -202,19 +202,25 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 }
 
 @Composable private fun WelcomeScreen(name: String, done: () -> Unit) {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { delay(120); visible = true }
+    val pulse = rememberInfiniteTransition(label = "welcomePulse")
+    val alpha by pulse.animateFloat(.72f, 1f, infiniteRepeatable(tween(1100), RepeatMode.Reverse), label = "welcomeAlpha")
     Box(Modifier.fillMaxSize()) {
         AnimatedBackdrop()
-        Card(Modifier.fillMaxWidth().padding(22.dp).align(Alignment.Center), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .13f)), elevation = CardDefaults.cardElevation(12.dp)) {
-            Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
-                    contentDescription = "RSS Data Recovery",
-                    modifier = Modifier.size(86.dp)
-                )
-                Text("CONGRATULATIONS 👏🎉", color = Color(0xFFFFD166), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-                Text("WELCOME, ${name.uppercase()}!", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("YOUR RECOVERY SPACE IS READY.", color = Color.White, fontWeight = FontWeight.SemiBold)
-                Button(onClick = done, modifier = Modifier.fillMaxWidth()) { Text("GET STARTED") }
+        AnimatedVisibility(visible = visible, enter = fadeIn(tween(500)) + scaleIn(initialScale = .94f, animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(500))) {
+            Card(Modifier.fillMaxWidth().padding(22.dp).align(Alignment.Center), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .06f)), elevation = CardDefaults.cardElevation(4.dp)) {
+                Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    AnimatedVisibility(visible = visible, enter = fadeIn(tween(650)) + scaleIn(initialScale = .78f, animationSpec = tween(650))) {
+                        androidx.compose.foundation.Image(painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), contentDescription = "RSS Data Recovery", modifier = Modifier.size(86.dp))
+                    }
+                    Text("CONGRATULATIONS 👏🎉", color = Color(0xFFFFD166).copy(alpha = alpha), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                    AnimatedVisibility(visible = visible, enter = fadeIn(tween(900)) + slideInVertically(initialOffsetY = { it / 3 }, animationSpec = tween(700))) {
+                        Text("WELCOME, $name!", color = Color.White.copy(alpha = alpha), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    }
+                    Text("YOUR RECOVERY SPACE IS READY.", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Button(onClick = done, modifier = Modifier.fillMaxWidth()) { Text("GET STARTED") }
+                }
             }
         }
     }
@@ -303,7 +309,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                         GlassPanel(
                             modifier = Modifier.fillMaxWidth(),
                             radius = 26.dp,
-                            alpha = if (dark) 0.14f else 0.52f
+                            alpha = if (dark) 0.055f else 0.06f
                         ) {
                             Column(
                                 modifier = Modifier
@@ -312,7 +318,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 androidx.compose.foundation.Image(
-                                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),
+                                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
                                     contentDescription = "Razeen Secure Solution",
                                     modifier = Modifier.size(78.dp)
                                 )
@@ -399,7 +405,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                                     )
                                 },
                             radius = 24.dp,
-                            alpha = if (dark) 0.16f else 0.48f
+                            alpha = if (dark) 0.055f else 0.06f
                         ) {
                             Row(
                                 Modifier.padding(14.dp),
@@ -578,10 +584,10 @@ private fun GlassPanel(
 ) {
     Card(
         modifier = modifier
-            .shadow(10.dp, RoundedCornerShape(radius))
+            .shadow(3.dp, RoundedCornerShape(radius))
             .border(
                 1.dp,
-                Color.White.copy(alpha = 0.34f),
+                Color.White.copy(alpha = 0.08f),
                 RoundedCornerShape(radius)
             ),
         shape = RoundedCornerShape(radius),
@@ -611,7 +617,7 @@ private fun GlassMenuItem(
                 if (selected) {
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
                 } else {
-                    Color.White.copy(alpha = 0.08f)
+                    Color.White.copy(alpha = 0.035f)
                 }
             )
             .border(
