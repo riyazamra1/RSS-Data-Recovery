@@ -244,7 +244,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                     Column(Modifier.fillMaxSize()) {
                         Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             androidx.compose.foundation.Image(
-                                painter = androidx.compose.ui.res.androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),
+                                painter = androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),
                                 contentDescription = "Razeen Secure Solution",
                                 modifier = Modifier.size(82.dp).clickable {
                                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc")))
