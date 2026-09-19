@@ -62,7 +62,7 @@ import java.text.DateFormat
 import java.security.MessageDigest
 import java.util.Date
 
-private enum class Page { HOME, SCAN, RESULTS, PREMIUM, SETTINGS, HISTORY }
+private enum class Page { HOME, FEATURES, SCAN, RESULTS, PREMIUM, SETTINGS, HISTORY }
 private enum class Mode { QUICK, DEEP }
 private enum class Category { IMAGE, AUDIO, VIDEO, FILES, DOCUMENTS }
 private data class FoundFile(val name: String, val size: Long, val uri: Uri, val category: Category, val modified: Long)
