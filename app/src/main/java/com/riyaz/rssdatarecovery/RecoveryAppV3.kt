@@ -170,6 +170,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
     }}
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable private fun RecoveryMain(
     prefs: SharedPreferences,
     dark: Boolean,
@@ -522,7 +523,7 @@ private fun pageTitle(page: Page, mode: Mode): String = when (page) {
         item{OutlinedButton(onClick=history,Modifier.fillMaxWidth()){Icon(Icons.Default.History,null);Spacer(Modifier.width(6.dp));Text("RECOVERY HISTORY")}}
     }
 }
-@Composable private fun ToolPill(title:String,icon:ImageVector,tint:Color,modifier:Modifier=Modifier){Row(modifier.fillMaxWidth().background(tint.copy(alpha=.08f),RoundedCornerShape(13.dp)).padding(horizontal=10.dp,vertical=9.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon,null,tint,Modifier.size(19.dp));Spacer(Modifier.width(7.dp));Text(title,style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.SemiBold)}}
+@Composable private fun ToolPill(title:String,icon:ImageVector,tint:Color,modifier:Modifier=Modifier){Row(modifier.fillMaxWidth().background(tint.copy(alpha=.08f),RoundedCornerShape(13.dp)).padding(horizontal=10.dp,vertical=9.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon, null, Modifier.size(19.dp), tint);Spacer(Modifier.width(7.dp));Text(title,style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.SemiBold)}}
 
 
 private fun categoryInfo(category: Category): Triple<String, ImageVector, Color> = when (category) {
