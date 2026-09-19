@@ -483,6 +483,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 
                     Page.SCAN -> ScanScreen(
                         mode,
+                        { mode = it; category = null },
                         category,
                         scanning,
                         progress,
@@ -673,7 +674,7 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
     }
 }
 
-@Composable private fun ScanScreen(mode: Mode, category: Category?, scanning: Boolean, progress: Float, count: Int, setProgress: (Float) -> Unit, setScanning: (Boolean) -> Unit, done: (List<FoundFile>) -> Unit, scope: kotlinx.coroutines.CoroutineScope, prefs: SharedPreferences) {
+@Composable private fun ScanScreen(mode: Mode, setMode: (Mode) -> Unit, category: Category?, scanning: Boolean, progress: Float, count: Int, setProgress: (Float) -> Unit, setScanning: (Boolean) -> Unit, done: (List<FoundFile>) -> Unit, scope: kotlinx.coroutines.CoroutineScope, prefs: SharedPreferences) {
     val context = LocalContext.current
     var paused by remember { mutableStateOf(false) }
     var scanJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
@@ -703,8 +704,8 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
         } } }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = mode == Mode.QUICK, onClick = { setScanning(false); setProgress(0f) }, label = { Text("QUICK RECOVERY") })
-                FilterChip(selected = mode == Mode.DEEP, onClick = { setScanning(false); setProgress(0f) }, label = { Text("DEEP RECOVERY") })
+                FilterChip(selected = mode == Mode.QUICK, onClick = { setMode(Mode.QUICK); setScanning(false); setProgress(0f) }, label = { Text("QUICK RECOVERY") })
+                FilterChip(selected = mode == Mode.DEEP, onClick = { setMode(Mode.DEEP); setScanning(false); setProgress(0f) }, label = { Text("DEEP RECOVERY") })
             }
             Text(if (mode == Mode.DEEP) "Deep scan searches more file types. Premium is required to recover non-image files." else "Quick recovery supports supported images for free.", style = MaterialTheme.typography.bodySmall)
         }
