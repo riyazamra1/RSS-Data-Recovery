@@ -134,19 +134,35 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 @Composable private fun RegistrationScreen(done: (String, String) -> Unit) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    Box(Modifier.fillMaxSize().background(Color(0xFF07111F))) {
-        Card(
+    var visible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { delay(120); visible = true }
+
+    Box(Modifier.fillMaxSize()) {
+        AnimatedBackdrop()
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(450)) +
+                scaleIn(initialScale = 0.94f, animationSpec = tween(500)) +
+                slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(500))
+        ) {
+            Card(
                 Modifier.fillMaxWidth().padding(22.dp).align(Alignment.Center).shadow(3.dp, RoundedCornerShape(30.dp)),
                 shape = RoundedCornerShape(30.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .13f)),
                 elevation = CardDefaults.cardElevation(3.dp)
             ) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    androidx.compose.foundation.Image(
-                        painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
-                        contentDescription = "RSS Data Recovery",
-                        modifier = Modifier.size(78.dp).align(Alignment.CenterHorizontally)
-                    )
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(tween(550)) + scaleIn(initialScale = .75f, animationSpec = tween(550))
+                    ) {
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
+                            contentDescription = "RSS Data Recovery",
+                            modifier = Modifier.size(78.dp).align(Alignment.CenterHorizontally)
+                        )
+                    }
                     Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                     Text("CREATE YOUR PROFILE", color = Color.White, fontWeight = FontWeight.Bold)
                     OutlinedTextField(
