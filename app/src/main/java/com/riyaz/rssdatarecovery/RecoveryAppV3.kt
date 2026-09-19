@@ -1055,18 +1055,8 @@ private fun storageUsage(context: Context): Triple<String, String, Float> {
 
 private fun formatBytes(value: Long): String = when { value < 1024 -> "$value B"; value < 1048576 -> "${value / 1024} KB"; value < 1073741824 -> "${value / 1048576} MB"; else -> "${value / 1073741824} GB" }
 
-private suspend fun registerRecoveryCustomer(name: String, email: String) = withContext(Dispatchers.IO) {
+private suspend fun registerRecoveryCustomer(name: String, email: String) {
     runCatching {
-        val connection = (java.net.URL("https://rsscore.cv/api/v1/recovery/register").openConnection() as java.net.HttpURLConnection)
-        connection.requestMethod = "POST"
-        connection.connectTimeout = 10_000
-        connection.readTimeout = 10_000
-        connection.doOutput = true
-        connection.setRequestProperty("Content-Type", "application/json")
-        val safeName = name.replace("\\", "\\\\").replace("\"", "\\\"")
-        val safeEmail = email.replace("\\", "\\\\").replace("\"", "\\\"")
-        val body = """{"email":"$safeEmail","display_name":"$safeName"}"""
-        connection.outputStream.use { it.write(body.toByteArray()) }
-        connection.responseCode
+        RssCoreClient.register(name, email)
     }
 }
