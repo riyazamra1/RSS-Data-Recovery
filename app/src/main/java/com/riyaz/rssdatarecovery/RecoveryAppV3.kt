@@ -979,7 +979,7 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
         }
         item { SettingSwitch("DARK APPEARANCE", dark, onDarkChange) }
         item { SettingSwitch("APP LOCK / BIOMETRIC", lock) { lock = it; prefs.edit().putBoolean("app_lock", it).apply() } }
-        item { Button(onClick = { pin = ""; showPinDialog = true }, modifier = Modifier.fillMaxWidth()) { Text(if (prefs.getBoolean("pin_enabled", false)) "CHANGE APP PIN" else "SET APP PIN") } }
+        item { Button(onClick = { pin = ""; showPinDialog = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Password, null); Spacer(Modifier.width(7.dp)); Text(if (prefs.getBoolean("pin_enabled", false)) "CHANGE APP PIN" else "SET APP PIN") } }
         item { SettingSwitch("HAPTIC FEEDBACK", haptics) { haptics = it; prefs.edit().putBoolean("haptics", it).apply() } }
         item { SettingSwitch("SCAN NOTIFICATIONS", notifications) { notifications = it; prefs.edit().putBoolean("notifications", it).apply() } }
         item { Text("COLOR THEME", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp)) }
@@ -1004,7 +1004,7 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
             GlassPanel(
                 modifier = Modifier.fillMaxWidth(),
                 radius = 22.dp,
-                alpha = if (dark) 0.14f else 0.52f
+                alpha = if (dark) 0.055f else 0.06f
             ) {
                 Column(
                     Modifier.fillMaxWidth().padding(18.dp),
@@ -1050,6 +1050,36 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
                 }
             }
         }
+    }
+}
+
+    if (showPinDialog) {
+        AlertDialog(
+            onDismissRequest = { showPinDialog = false },
+            title = { Text(if (prefs.getBoolean("pin_enabled", false)) "CHANGE APP PIN" else "SET APP PIN") },
+            text = {
+                OutlinedTextField(
+                    value = pin,
+                    onValueChange = { value -> if (value.length <= 6 && value.all(Char::isDigit)) pin = value },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("6-DIGIT PIN") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = pin.length == 6,
+                    onClick = {
+                        prefs.edit().putString("pin_hash", hashPin(pin)).putBoolean("pin_enabled", true).putBoolean("app_lock", true).apply()
+                        lock = true
+                        showPinDialog = false
+                        pin = ""
+                    }
+                ) { Text("SAVE") }
+            },
+            dismissButton = { TextButton(onClick = { showPinDialog = false }) { Text("CANCEL") } }
+        )
     }
 }
 
