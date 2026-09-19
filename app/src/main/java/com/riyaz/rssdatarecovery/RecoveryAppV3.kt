@@ -285,7 +285,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                 modifier = Modifier
                     .width(320.dp)
                     .fillMaxHeight()
-                    .shadow(18.dp),
+                    .shadow(6.dp),
                 drawerContainerColor = Color.Transparent,
                 drawerContentColor = if (dark) Color.White else Color(0xFF172033),
                 drawerShape = RoundedCornerShape(topEnd = 30.dp, bottomEnd = 30.dp)
@@ -296,56 +296,25 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    paletteGlass(theme, dark, 0.94f),
-                                    Color.White.copy(alpha = if (dark) 0.07f else 0.58f),
-                                    paletteGlass(theme, dark, 0.88f)
+                                    paletteGlass(theme, dark, 0.06f),
+                                    Color.White.copy(alpha = if (dark) 0.025f else 0.04f),
+                                    paletteGlass(theme, dark, 0.045f)
                                 )
                             )
                         )
                         .padding(14.dp)
                 ) {
                     Column(Modifier.fillMaxSize()) {
-                        // Glass profile header: app logo + welcome + name + email.
-                        GlassPanel(
-                            modifier = Modifier.fillMaxWidth(),
-                            radius = 26.dp,
-                            alpha = if (dark) 0.055f else 0.06f
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 18.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                androidx.compose.foundation.Image(
-                                    painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
-                                    contentDescription = "Razeen Secure Solution",
-                                    modifier = Modifier.size(78.dp)
-                                )
-                                Spacer(Modifier.height(10.dp))
-                                Text(
-                                    "WELCOME BACK",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    name,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    maxLines = 1
-                                )
-                                if (email.isNotBlank()) {
-                                    Text(
-                                        email,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            androidx.compose.foundation.Image(
+                                painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
+                                contentDescription = "RSS Data Recovery",
+                                modifier = Modifier.size(104.dp)
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text("WELCOME BACK", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                            if (email.isNotBlank()) Text(email, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
 
                         Spacer(Modifier.height(18.dp))
@@ -358,17 +327,10 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                         )
                         Spacer(Modifier.height(6.dp))
 
-                        GlassMenuItem("Home", Icons.Default.Home, Color(0xFF4F7CFF), page == Page.HOME) {
-                            navigate(Page.HOME)
-                        }
-                        GlassMenuItem("Recovery", Icons.Default.Restore, Color(0xFFFF8A3D), page == Page.SCAN) {
-                            mode = Mode.QUICK
-                            category = null
-                            navigate(Page.SCAN)
-                        }
-                        GlassMenuItem("Results", Icons.Default.Folder, Color(0xFF18B7A0), page == Page.RESULTS) {
-                            navigate(Page.RESULTS)
-                        }
+                        GlassMenuItem("Home", Icons.Default.Home, Color(0xFF4F7CFF), page == Page.HOME) { navigate(Page.HOME) }
+                        GlassMenuItem("App Features", Icons.Default.Dashboard, Color(0xFF8E44AD), page == Page.FEATURES) { navigate(Page.FEATURES) }
+                        GlassMenuItem("Recovery", Icons.Default.Restore, Color(0xFFFF8A3D), page == Page.SCAN) { mode = Mode.QUICK; category = null; navigate(Page.SCAN) }
+                        GlassMenuItem("Results", Icons.Default.Folder, Color(0xFF18B7A0), page == Page.RESULTS) { navigate(Page.RESULTS) }
 
                         Spacer(Modifier.height(10.dp))
                         Text(
@@ -587,7 +549,7 @@ private fun GlassPanel(
             .shadow(3.dp, RoundedCornerShape(radius))
             .border(
                 1.dp,
-                Color.White.copy(alpha = 0.08f),
+                Color.White.copy(alpha = 0.035f),
                 RoundedCornerShape(radius)
             ),
         shape = RoundedCornerShape(radius),
