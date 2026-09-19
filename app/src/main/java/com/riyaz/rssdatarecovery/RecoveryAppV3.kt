@@ -102,17 +102,22 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 
 @Composable private fun AnimatedBackdrop() {
     val t = rememberInfiniteTransition(label = "bg")
-    val x by t.animateFloat(0f, 1f, infiniteRepeatable(tween(6500), RepeatMode.Reverse), label = "x")
-    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF07111F), Color(0xFF17304A), Color(0xFF090D16)), start = androidx.compose.ui.geometry.Offset(x * 900f, 0f), end = androidx.compose.ui.geometry.Offset(0f, 1500f))))
+    val x by t.animateFloat(0f, 1f, infiniteRepeatable(tween(5200), RepeatMode.Reverse), label = "x")
+    val y by t.animateFloat(0f, 1f, infiniteRepeatable(tween(6800), RepeatMode.Reverse), label = "y")
+    val glow by t.animateFloat(.10f, .22f, infiniteRepeatable(tween(2600), RepeatMode.Reverse), label = "glow")
+    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF07111F), Color(0xFF17304A), Color(0xFF090D16)), start = androidx.compose.ui.geometry.Offset(x * 1100f, y * 500f), end = androidx.compose.ui.geometry.Offset((1f - x) * 700f, 1500f)))) {
+        Box(Modifier.offset(x = (x * 90f - 45f).dp, y = (y * 120f - 60f).dp).size(260.dp).background(Color(0xFF2EA7FF).copy(alpha = glow), androidx.compose.foundation.shape.CircleShape))
+        Box(Modifier.align(Alignment.BottomEnd).offset(x = (-x * 70f).dp, y = (-y * 90f).dp).size(220.dp).background(Color(0xFFB7791F).copy(alpha = glow * .72f), androidx.compose.foundation.shape.CircleShape))
+    }
 }
 
 @Composable private fun LockScreen(prefs: SharedPreferences, onUnlock: () -> Unit, onPinUnlock: (String) -> Unit, onForgotPin: () -> Unit) {
     Box(Modifier.fillMaxSize()) {
         AnimatedBackdrop()
-        Card(Modifier.fillMaxWidth().padding(24.dp).align(Alignment.Center), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.14f)), elevation = CardDefaults.cardElevation(12.dp)) {
+        Card(Modifier.fillMaxWidth().padding(24.dp).align(Alignment.Center), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.14f)), elevation = CardDefaults.cardElevation(4.dp)) {
             Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Icon(Icons.Default.Lock, null, Modifier.size(58.dp), tint = Color(0xFFFFD166))
-                Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Text("RSS DATA RECOVERY", modifier = Modifier.align(Alignment.CenterHorizontally), color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 Text("APP LOCKED", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 if (prefs.getBoolean("pin_enabled", false)) {
                     var pin by remember { mutableStateOf("") }
@@ -149,7 +154,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
             Card(
                 Modifier.fillMaxWidth().padding(22.dp).align(Alignment.Center).shadow(3.dp, RoundedCornerShape(30.dp)),
                 shape = RoundedCornerShape(30.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .13f)),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .06f)),
                 elevation = CardDefaults.cardElevation(3.dp)
             ) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -164,13 +169,13 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                         )
                     }
                     Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-                    Text("CREATE YOUR PROFILE", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("CREATE YOUR PROFILE", modifier = Modifier.align(Alignment.CenterHorizontally), color = Color.White, fontWeight = FontWeight.Bold)
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("FULL NAME", color = Color.White) },
-                        leadingIcon = { Icon(Icons.Default.Person, null, tint = Color.White) },
+                        leadingIcon = { Icon(Icons.Default.Person, null, tint = Color(0xFF4F7CFF)) },
                         singleLine = true,
                         textStyle = LocalTextStyle.current.copy(color = Color.White),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
@@ -180,7 +185,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                         onValueChange = { email = it },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("EMAIL ADDRESS", color = Color.White) },
-                        leadingIcon = { Icon(Icons.Default.Email, null, tint = Color.White) },
+                        leadingIcon = { Icon(Icons.Default.Email, null, tint = Color(0xFF18B7A0)) },
                         singleLine = true,
                         textStyle = LocalTextStyle.current.copy(color = Color.White),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
