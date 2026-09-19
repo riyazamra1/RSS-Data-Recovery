@@ -244,63 +244,18 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
                     Column(Modifier.fillMaxSize()) {
                         Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             androidx.compose.foundation.Image(
-                                painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
-                                contentDescription = "RSS Data Recovery",
-                                modifier = Modifier.size(104.dp)
+                                painter = androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),
+                                contentDescription = "Razeen Secure Solution",
+                                modifier = Modifier.size(82.dp).clickable {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc")))
+                                }
                             )
                             Spacer(Modifier.height(6.dp))
-                            Text("WELCOME BACK", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                            Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-                            if (email.isNotBlank()) Text(email, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-
-                        Spacer(Modifier.height(18.dp))
-                        Text(
-                            "MAIN",
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(6.dp))
-
-                        GlassMenuItem("Home", Icons.Default.Home, Color(0xFF4F7CFF), page == Page.HOME) { navigate(Page.HOME) }
-                        GlassMenuItem("App Features", Icons.Default.Dashboard, Color(0xFF8E44AD), page == Page.FEATURES) { navigate(Page.FEATURES) }
-                        GlassMenuItem("Recovery", Icons.Default.Restore, Color(0xFFFF8A3D), page == Page.SCAN) { mode = Mode.QUICK; category = null; navigate(Page.SCAN) }
-                        GlassMenuItem("Results", Icons.Default.Folder, Color(0xFF18B7A0), page == Page.RESULTS) { navigate(Page.RESULTS) }
-
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            "SUPPORT",
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(6.dp))
-
-                        GlassMenuItem("Premium Upgrade", Icons.Default.Star, Color(0xFFFFB21A), page == Page.PREMIUM) {
-                            navigate(Page.PREMIUM)
-                        }
-                        GlassMenuItem("Recovery History", Icons.Default.History, Color(0xFF9B5CFF), page == Page.HISTORY) {
-                            navigate(Page.HISTORY)
-                        }
-                        GlassMenuItem("Settings", Icons.Default.Settings, Color(0xFF60708F), page == Page.SETTINGS) {
-                            navigate(Page.SETTINGS)
-                        }
-
-                        Spacer(Modifier.weight(1f))
-
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("RAZEEN SECURE SOLUTION", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             Text("Mobile & PC Software • CCTV • Networking • System Administration", style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text("077 115 5504  •  070 155 5504", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             Text("rsscctvsolution@gmail.com", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             Text("www.rsscctvsolution.eu.cc", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                            Spacer(Modifier.height(6.dp))
-                            androidx.compose.foundation.Image(painter = androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo), contentDescription = "Razeen Secure Solution", modifier = Modifier.size(60.dp).clickable {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc")))
-                            })
                         }
                     }
                 }
@@ -466,7 +421,7 @@ private fun GlassPanel(
             .shadow(3.dp, RoundedCornerShape(radius))
             .border(
                 1.dp,
-                Color.White.copy(alpha = 0.035f),
+                Color.White.copy(alpha = 0.06f),
                 RoundedCornerShape(radius)
             ),
         shape = RoundedCornerShape(radius),
@@ -494,7 +449,7 @@ private fun GlassMenuItem(
             .clip(shape)
             .background(
                 if (selected) {
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
                 } else {
                     Color.White.copy(alpha = 0.035f)
                 }
@@ -511,7 +466,7 @@ private fun GlassMenuItem(
         Box(
             Modifier
                 .size(38.dp)
-                .background(iconColor.copy(alpha = 0.14f), RoundedCornerShape(13.dp)),
+                .background(iconColor.copy(alpha = 0.06f), RoundedCornerShape(13.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, null, tint = iconColor, modifier = Modifier.size(21.dp))
