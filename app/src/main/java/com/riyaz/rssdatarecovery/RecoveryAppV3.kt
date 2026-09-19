@@ -27,7 +27,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -135,35 +134,19 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 @Composable private fun RegistrationScreen(done: (String, String) -> Unit) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var visible by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) { delay(120); visible = true }
-
-    Box(Modifier.fillMaxSize()) {
-        AnimatedBackdrop()
-        AnimatedVisibility(
-            visible = visible,
-            enter = fadeIn(tween(450)) +
-                scaleIn(initialScale = 0.94f, animationSpec = tween(500)) +
-                slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(500))
-        ) {
-            Card(
+    Box(Modifier.fillMaxSize().background(Color(0xFF07111F))) {
+        Card(
                 Modifier.fillMaxWidth().padding(22.dp).align(Alignment.Center).shadow(3.dp, RoundedCornerShape(30.dp)),
                 shape = RoundedCornerShape(30.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .13f)),
                 elevation = CardDefaults.cardElevation(3.dp)
             ) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    AnimatedVisibility(
-                        visible = visible,
-                        enter = fadeIn(tween(550)) + scaleIn(initialScale = .75f, animationSpec = tween(550))
-                    ) {
-                        androidx.compose.foundation.Image(
-                            painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
-                            contentDescription = "RSS Data Recovery",
-                            modifier = Modifier.size(78.dp).align(Alignment.CenterHorizontally)
-                        )
-                    }
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
+                        contentDescription = "RSS Data Recovery",
+                        modifier = Modifier.size(78.dp).align(Alignment.CenterHorizontally)
+                    )
                     Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                     Text("CREATE YOUR PROFILE", color = Color.White, fontWeight = FontWeight.Bold)
                     OutlinedTextField(
@@ -714,7 +697,7 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
                     scanJob = scope.launch {
                         try {
                             val result = queryFiles(context, category)
-                            for (i in 1..24) { kotlinx.coroutines.currentCoroutineContext().let { kotlinx.coroutines.ensureActive(it) }; while (paused) { kotlinx.coroutines.ensureActive(); delay(100) }; delay(if (mode == Mode.DEEP) 55 else 30); setProgress(i / 24f) }
+                            for (i in 1..24) { kotlinx.coroutines.currentCoroutineContext().ensureActive(); while (paused) { kotlinx.coroutines.currentCoroutineContext().ensureActive(); delay(100) }; delay(if (mode == Mode.DEEP) 55 else 30); setProgress(i / 24f) }
                             prefs.edit().putString("last_scan", DateFormat.getDateTimeInstance().format(Date())).putInt("last_count", result.size).apply()
                             setScanning(false)
                             done(result)
