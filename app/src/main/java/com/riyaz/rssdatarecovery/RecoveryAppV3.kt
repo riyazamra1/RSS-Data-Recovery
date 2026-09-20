@@ -422,12 +422,12 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
             ) {
                 when (page) {
                     Page.HOME -> HomeScreen(
-                        { mode = Mode.QUICK; category = null; navigate(Page.SCAN) },
-                        { mode = Mode.DEEP; category = null; navigate(Page.SCAN) },
-                        { navigate(Page.HISTORY) },
-                        { navigate(Page.RESULTS) },
-                        { navigate(Page.RESULTS) }
-                    ) { category = it; mode = Mode.QUICK; navigate(Page.SCAN) }
+                        quick = { mode = Mode.QUICK; category = null; navigate(Page.SCAN) },
+                        deep = { mode = Mode.DEEP; category = null; navigate(Page.SCAN) },
+                        history = { navigate(Page.HISTORY) },
+                        onResults = { navigate(Page.RESULTS) },
+                        onCategory = { selected -> category = selected; mode = Mode.QUICK; navigate(Page.SCAN) }
+                    )
 
                     Page.SCAN -> ScanScreen(
                         mode,
