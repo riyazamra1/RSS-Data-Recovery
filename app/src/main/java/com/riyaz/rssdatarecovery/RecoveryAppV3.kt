@@ -317,7 +317,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                     Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.surface)
-                        .graphicsLayer { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) renderEffect = BlurEffect(20f, 20f, TileMode.Clamp) }
+                        .graphicsLayer { if (!dark && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) renderEffect = BlurEffect(10f, 10f, TileMode.Clamp) }
                         .padding(14.dp)
                 ) {
                     Box(Modifier.fillMaxSize()) {
