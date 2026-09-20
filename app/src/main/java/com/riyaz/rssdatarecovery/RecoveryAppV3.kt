@@ -356,13 +356,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                                 pageTitle(page, mode),
                                 fontWeight = FontWeight.Bold
                             )
-                            if (page == Page.HOME) {
-                                Text(
-                                    "",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+
                         }
                     },
                     navigationIcon = {
@@ -573,9 +567,9 @@ private fun pageTitle(page: Page, mode: Mode): String = when (page) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(11.dp)){
         item{Text("RECOVER YOUR FILES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("SCAN, PREVIEW AND RECOVER SAFELY",style=MaterialTheme.typography.bodySmall)}
         item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(18.dp)),shape=RoundedCornerShape(18.dp),elevation=CardDefaults.cardElevation(1.dp)){Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Storage,null,tint=Color(0xFF4F7CFF));Spacer(Modifier.width(9.dp));Text("DEVICE STORAGE",fontWeight=FontWeight.Bold)};Text("${storage.first} USED  •  ${storage.second} FREE",style=MaterialTheme.typography.bodySmall);LinearProgressIndicator(progress={storage.third},modifier=Modifier.fillMaxWidth())}}}
-        item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){ActionCard("Quick Recovery",Icons.Default.FlashOn,Color(0xFFE67E22),quick,Modifier.weight(1f));ActionCard("Deep Recovery",Icons.Default.Search,Color(0xFF8E44AD),deep,Modifier.weight(1f))}}
         item{Text("RECOVERY BY CATEGORY",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.ExtraBold)}
         item{LazyVerticalGrid(GridCells.Fixed(2),Modifier.fillMaxWidth().height(250.dp),verticalArrangement=Arrangement.spacedBy(9.dp),horizontalArrangement=Arrangement.spacedBy(9.dp),userScrollEnabled=false){items(Category.values().toList()){cat->val info=categoryInfo(cat);ActionCard(info.first,info.second,info.third,{onCategory(cat)},Modifier.fillMaxWidth())}}}
+        item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){ActionCard("Quick Recovery",Icons.Default.FlashOn,Color(0xFFE67E22),quick,Modifier.weight(1f));ActionCard("Deep Recovery",Icons.Default.Search,Color(0xFF8E44AD),deep,Modifier.weight(1f))}}
         item{Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)){Text("RECOVERY TOOLS",fontWeight=FontWeight.ExtraBold);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Safe preview",Icons.Default.Visibility,Color(0xFF4F7CFF),{onResults()},Modifier.weight(1f));ToolPill("Offline scan",Icons.Default.CloudOff,Color(0xFF18B7A0),{quick()},Modifier.weight(1f))};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Duplicate check",Icons.Default.ContentCopy,Color(0xFFE67E22),onDuplicateCheck,Modifier.weight(1f));ToolPill("Recovery history",Icons.Default.History,Color(0xFF8E44AD),{history()},Modifier.weight(1f))}}}
         item{OutlinedButton(onClick=history,Modifier.fillMaxWidth()){Icon(Icons.Default.History,null);Spacer(Modifier.width(6.dp));Text("RECOVERY HISTORY")}}
     }
@@ -653,18 +647,6 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
                 }
             }
         }
-        item {
-            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(20.dp)), shape = RoundedCornerShape(20.dp)) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text("RECOVERY TOOLS", fontWeight = FontWeight.ExtraBold)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { setMode(Mode.QUICK); setScanning(false); setProgress(0f) }, modifier = Modifier.weight(1f)) { Icon(Icons.Default.FlashOn, null); Spacer(Modifier.width(5.dp)); Text("QUICK") }
-                        OutlinedButton(onClick = { setMode(Mode.DEEP); setScanning(false); setProgress(0f) }, modifier = Modifier.weight(1f)) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(5.dp)); Text("DEEP") }
-                    }
-                    Text("After scanning, Results will show files, selection controls and duplicate candidates.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
         item { Card(Modifier.shadow(3.dp, RoundedCornerShape(18.dp)), elevation = CardDefaults.cardElevation(2.dp)) { Column(Modifier.padding(14.dp)) {
             if (scanning) {
                 LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp)); Text("${(progress * 100).toInt()}% • $count FILES"); Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) { OutlinedButton(onClick = { paused = !paused }) { Text(if (paused) "RESUME" else "PAUSE") }; OutlinedButton(onClick = { scanJob?.cancel(); scanJob = null; setScanning(false); paused = false; setProgress(0f) }) { Text("CANCEL") } }
@@ -678,12 +660,6 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
                 }, modifier = Modifier.fillMaxWidth()) { Text("START SCAN") }
             }
         } } }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = mode == Mode.QUICK, onClick = { setMode(Mode.QUICK); setScanning(false); setProgress(0f) }, label = { Text("QUICK RECOVERY") })
-                FilterChip(selected = mode == Mode.DEEP, onClick = { setMode(Mode.DEEP); setScanning(false); setProgress(0f) }, label = { Text("DEEP RECOVERY") })
-            }
-            Text(if (mode == Mode.DEEP) "Deep scan searches more file types. Premium is required to recover non-image files." else "Quick recovery supports supported images for free.", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -802,7 +778,7 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
                 }
             }
         }
-        item {
+        if (visible.isNotEmpty()) item {
             Button(onClick = {
                 val chosen = files.filter { it.uri in selected }
                 if (!premium) {
@@ -811,7 +787,7 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
                     showConfirm = true
                 }
             }, modifier = Modifier.fillMaxWidth(), enabled = selected.isNotEmpty()) {
-                Text(if (premium) "RECOVER SELECTED" else "RECOVER SELECTED")
+                Text("RECOVER SELECTED")
             }
         }
         message?.let { text ->
