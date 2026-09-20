@@ -11,7 +11,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberInfiniteTransition
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.RepeatMode
@@ -113,9 +113,7 @@ class MainActivity : FragmentActivity() {
         if (expected.isNotEmpty() && hashPin(pin) == expected) {
             authenticated = true
             appLocked = false
-        } else {
-            Toast.makeText(this, "INCORRECT PIN", Toast.LENGTH_SHORT).show()
-        }
+        } else Toast.makeText(this, "INCORRECT PIN", Toast.LENGTH_SHORT).show()
     }
 
     private fun forgotPin() {
@@ -151,9 +149,7 @@ class MainActivity : FragmentActivity() {
             if (result.first) {
                 showCodeDialog(email)
                 Toast.makeText(this@MainActivity, "RESET CODE SENT TO YOUR EMAIL", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(this@MainActivity, result.second, Toast.LENGTH_LONG).show()
-            }
+            } else Toast.makeText(this@MainActivity, result.second, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -263,36 +259,28 @@ class MainActivity : FragmentActivity() {
                 .build()
             prompt.authenticate(promptInfo)
         } else if (!resetPinAfterBiometric) {
-            if (getSharedPreferences("rss_recovery", MODE_PRIVATE).getBoolean("pin_enabled", false)) {
-                Toast.makeText(this, "USE YOUR PIN TO UNLOCK", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "SET A PIN OR BIOMETRIC TO USE APP LOCK", Toast.LENGTH_LONG).show()
-            }
+            if (getSharedPreferences("rss_recovery", MODE_PRIVATE).getBoolean("pin_enabled", false)) Toast.makeText(this, "USE YOUR PIN TO UNLOCK", Toast.LENGTH_SHORT).show()
+            else Toast.makeText(this, "SET A PIN OR BIOMETRIC TO USE APP LOCK", Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun postJson(endpoint: String, body: JSONObject): Pair<Boolean, String> {
-        return try {
-            val connection = URL(endpoint).openConnection() as HttpURLConnection
-            connection.requestMethod = "POST"
-            connection.connectTimeout = 15_000
-            connection.readTimeout = 15_000
-            connection.doOutput = true
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            val status = connection.responseCode
-            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-            val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            val message = runCatching { JSONObject(text).optString("error").ifEmpty { text } }.getOrDefault(text)
-            Pair(status in 200..299, if (status in 200..299) text else message.ifEmpty { "REQUEST FAILED ($status)" })
-        } catch (_: Exception) {
-            Pair(false, "EMAIL RESET SERVICE UNAVAILABLE")
-        }
-    }
+    private fun postJson(endpoint: String, body: JSONObject): Pair<Boolean, String> = try {
+        val connection = URL(endpoint).openConnection() as HttpURLConnection
+        connection.requestMethod = "POST"
+        connection.connectTimeout = 15_000
+        connection.readTimeout = 15_000
+        connection.doOutput = true
+        connection.setRequestProperty("Content-Type", "application/json")
+        connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+        val status = connection.responseCode
+        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+        val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+        val message = runCatching { JSONObject(text).optString("error").ifEmpty { text } }.getOrDefault(text)
+        Pair(status in 200..299, if (status in 200..299) text else message.ifEmpty { "REQUEST FAILED ($status)" })
+    } catch (_: Exception) { Pair(false, "EMAIL RESET SERVICE UNAVAILABLE") }
 
     private fun hashPin(pin: String): String = java.security.MessageDigest.getInstance("SHA-256")
-        .digest(pin.toByteArray(Charsets.UTF_8))
-        .joinToString("") { it.toString(16).padStart(2, '0') }
+        .digest(pin.toByteArray(Charsets.UTF_8)).joinToString("") { it.toString(16).padStart(2, '0') }
 }
 
 fun openExternal(activity: androidx.activity.ComponentActivity, uri: String) {
