@@ -34,6 +34,7 @@ dependencies {
     implementation(bom)
     androidTestImplementation(bom)
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.activity:activity-compose:1.10.0")
