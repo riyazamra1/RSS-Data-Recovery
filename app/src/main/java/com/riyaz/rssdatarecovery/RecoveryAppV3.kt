@@ -764,15 +764,16 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
     result
 }
 
-@Composable private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, scope: kotlinx.coroutines.CoroutineScope, upgrade: () -> Unit) {
+@Composable
+private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, scope: kotlinx.coroutines.CoroutineScope, upgrade: () -> Unit) {
     val context = LocalContext.current
     var search by remember { mutableStateOf("") }
     var sort by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf(setOf<Uri>()) }
     var showConfirm by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-
     var pendingRecovery by remember { mutableStateOf<List<FoundFile>>(emptyList()) }
+
     val trashWriteLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         val pending = pendingRecovery
         pendingRecovery = emptyList()
@@ -785,94 +786,171 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
             message = "SYSTEM RECOVERY PERMISSION WAS NOT GRANTED."
         }
     }
+
     val visible = files.filter { it.name.contains(search, true) }.let { filtered ->
         when (sort) {
             1 -> filtered.sortedByDescending(FoundFile::size)
             2 -> filtered.sortedByDescending(FoundFile::modified)
-            else -> filtered.sortedBy { file -> file.name.lowercase() }
+            else -> filtered.sortedBy { it.name.lowercase() }
         }
     }
+    val grouped = Category.entries.associateWith { category ->
+        visible.filter { it.category == category }
+    }.filterValues { it.isNotEmpty() }
 
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), label = { Text("SEARCH RECOVERY RESULTS") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true) }
-        item {
-            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(20.dp)), shape = RoundedCornerShape(20.dp)) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Folder, null, tint = Color(0xFF18B7A0), modifier = Modifier.size(32.dp))
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("RECOVERY RESULTS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-                            Text("${files.size} files found", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
+        OutlinedTextField(
+            value = search,
+            onValueChange = { search = it },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(22.dp),
+            label = { Text("SEARCH RECOVERY RESULTS") },
+            leadingIcon = { Icon(Icons.Default.Search, null, tint = Color(0xFF4F7CFF)) },
+            singleLine = true
+        )
+        Spacer(Modifier.height(8.dp))
+        Card(
+            Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(20.dp)),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Folder, null, tint = Color(0xFF18B7A0), modifier = Modifier.size(30.dp))
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("RECOVERY RESULTS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                    Text("${visible.size} matching files • ${files.size} total", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (selected.isNotEmpty()) Text("${selected.size} SELECTED", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+        Spacer(Modifier.height(7.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            FilterChip(selected = sort == 0, onClick = { sort = 0 }, label = { Text("NAME") })
+            FilterChip(selected = sort == 1, onClick = { sort = 1 }, label = { Text("SIZE") })
+            FilterChip(selected = sort == 2, onClick = { sort = 2 }, label = { Text("DATE") })
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = { selected = visible.map(FoundFile::uri).toSet() }, enabled = visible.isNotEmpty()) { Text("ALL") }
+            TextButton(onClick = { selected = emptySet() }, enabled = selected.isNotEmpty()) { Text("CLEAR") }
+        }
+
+        if (message != null) {
+            Card(
+                Modifier.fillMaxWidth().padding(bottom = 7.dp).shadow(1.dp, RoundedCornerShape(14.dp)),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Text(message!!, Modifier.padding(12.dp), fontWeight = FontWeight.SemiBold)
+            }
+        }
+
+        LazyColumn(
+            Modifier.weight(1f).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
+            contentPadding = PaddingValues(bottom = 10.dp)
+        ) {
+            if (visible.isEmpty()) {
+                item {
+                    Card(
+                        Modifier.fillMaxWidth().padding(top = 8.dp).shadow(2.dp, RoundedCornerShape(18.dp)),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(if (files.isEmpty()) Icons.Default.SearchOff else Icons.Default.FilterAltOff, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
+                            Text(if (files.isEmpty()) "NO SCAN RESULTS YET" else "NO MATCHING RESULTS", fontWeight = FontWeight.ExtraBold)
+                            Text(
+                                if (files.isEmpty()) "Run Quick Recovery or Deep Recovery to populate this page." else "Change the search or sorting option.",
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            } else {
+                grouped.forEach { (category, categoryFiles) ->
+                    item(key = "header_${category.name}") {
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 1.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val info = categoryInfo(category)
+                            Icon(info.second, null, Modifier.size(22.dp), tint = info.third)
+                            Spacer(Modifier.width(8.dp))
+                            Text(info.first.uppercase(), fontWeight = FontWeight.ExtraBold)
+                            Spacer(Modifier.width(6.dp))
+                            Text("${categoryFiles.size}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    items(categoryFiles, key = { it.uri.toString() }) { file ->
+                        Card(
+                            Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().clickable {
+                                    selected = if (file.uri in selected) selected - file.uri else selected + file.uri
+                                }.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(checked = file.uri in selected, onCheckedChange = null)
+                                val info = categoryInfo(file.category)
+                                Icon(info.second, null, Modifier.size(27.dp), tint = info.third)
+                                Spacer(Modifier.width(8.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(file.name, maxLines = 1, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        "${formatBytes(file.size)} • ${DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(file.modified * 1000L))}${if (file.isTrashed) " • TRASHED" else ""}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-        if (!premium && visible.isNotEmpty()) {
-            item {
-                Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(18.dp)),shape=RoundedCornerShape(18.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer)){
-                    Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Star,null,tint=Color(0xFFFFB21A),modifier=Modifier.size(28.dp));Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)){Text("UNLOCK MORE RECOVERY",fontWeight=FontWeight.ExtraBold);Text("Deep recovery, audio, video, files, original metadata and quality.",style=MaterialTheme.typography.bodySmall)};TextButton(onClick=upgrade){Text("UPGRADE")}}
-                }
-            }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                FilterChip(selected = sort == 0, onClick = { sort = 0 }, label = { Text("NAME") })
-                FilterChip(selected = sort == 1, onClick = { sort = 1 }, label = { Text("SIZE") })
-                FilterChip(selected = sort == 2, onClick = { sort = 2 }, label = { Text("DATE") })
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = { selected = visible.map(FoundFile::uri).toSet() }) { Text("SELECT ALL") }
-                TextButton(onClick = { selected = emptySet() }) { Text("CLEAR") }
-            }
-        }
-        if (visible.isEmpty()) {
-            item {
-                Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(18.dp))) {
-                    Column(Modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(if (files.isEmpty()) Icons.Default.SearchOff else Icons.Default.FilterAltOff, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
-                        Text(if (files.isEmpty()) "NO SCAN RESULTS YET" else "NO MATCHING RESULTS", fontWeight = FontWeight.ExtraBold)
-                        Text(if (files.isEmpty()) "Run Quick Recovery or Deep Recovery to populate this page." else "Change the search or duplicate filter.", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-        }
-        items(visible) { file ->
-            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp)), elevation = CardDefaults.cardElevation(1.dp)) {
-                Row(Modifier.clickable {
-                    selected = if (file.uri in selected) selected - file.uri else selected + file.uri
-                }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = file.uri in selected, onCheckedChange = null)
-                    val info = categoryInfo(file.category)
-                    Icon(info.second, null, Modifier.size(27.dp), tint = info.third)
+
+        if (!premium) {
+            Card(
+                Modifier.fillMaxWidth().padding(top = 7.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Star, null, tint = Color(0xFFFFB21A), modifier = Modifier.size(25.dp))
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(file.name, maxLines = 1)
-                        Text(formatBytes(file.size), style = MaterialTheme.typography.bodySmall)
+                        Text("UNLOCK MORE RECOVERY", fontWeight = FontWeight.ExtraBold)
+                        Text("Deep recovery, audio, video, files and original source details.", style = MaterialTheme.typography.bodySmall, maxLines = 2)
                     }
-                    Text("PREVIEW", style = MaterialTheme.typography.labelSmall)
+                    TextButton(onClick = upgrade) { Text("UPGRADE") }
                 }
             }
         }
-        if (visible.isNotEmpty()) item {
-            Button(onClick = {
+
+        Button(
+            onClick = {
                 val chosen = files.filter { it.uri in selected }
                 if (!premium) {
                     upgrade()
                 } else if (chosen.isNotEmpty()) {
                     showConfirm = true
                 }
-            }, modifier = Modifier.fillMaxWidth(), enabled = selected.isNotEmpty()) {
-                Text("RECOVER SELECTED")
-            }
-        }
-        message?.let { text ->
-            item {
-                Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(14.dp))) {
-                    Text(text, Modifier.padding(12.dp), fontWeight = FontWeight.SemiBold)
-                }
-            }
+            },
+            modifier = Modifier.fillMaxWidth().padding(top = 7.dp),
+            enabled = selected.isNotEmpty()
+        ) {
+            Icon(Icons.Default.Restore, null)
+            Spacer(Modifier.width(7.dp))
+            Text(if (selected.isEmpty()) "RECOVER SELECTED" else "RECOVER ${selected.size} SELECTED")
         }
     }
 
@@ -882,11 +960,7 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
             onDismissRequest = { showConfirm = false },
             title = { Text("CONFIRM RECOVERY") },
             text = {
-                Text(if (premium) {
-                    "RECOVER \${chosen.size} SELECTED FILE(S) TO RSS DATA RECOVERY."
-                } else {
-                    "FREE RECOVERY SUPPORTS IMAGES ONLY. FILES WILL USE A NEW NAME, REDUCED QUALITY, AND NO ORIGINAL METADATA."
-                })
+                Text("RECOVER ${chosen.size} SELECTED FILE(S) TO RSS DATA RECOVERY. PREMIUM PRESERVES THE SOURCE FILE CONTENT AND AVAILABLE SOURCE DETAILS.")
             },
             confirmButton = {
                 TextButton(onClick = {
