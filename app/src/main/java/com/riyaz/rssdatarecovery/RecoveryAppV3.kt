@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import androidx.biometric.BiometricManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -793,7 +794,115 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
         }
     }
 
-@Composable private fun PremiumScreen(active:Boolean,onUpgrade:()->Unit){val rows=listOf(Triple("Quick image recovery",true,true),Triple("Deep recovery engine",false,true),Triple("Audio & video recovery",false,true),Triple("Documents & files",false,true),Triple("Original file names",false,true),Triple("Original metadata",false,true),Triple("Original quality",false,true),Triple("Large batch recovery",false,true),Triple("Advanced duplicate detection",false,true),Triple("Priority recovery",false,true),Triple("Recovery destination control",true,true),Triple("Recovery history",true,true),Triple("App lock & biometric",true,true));LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Text("FEATURE COMPARISON",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("FREE vs PRO recovery capabilities",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(18.dp)),shape=RoundedCornerShape(18.dp)){Column(Modifier.fillMaxWidth().padding(12.dp)){Row(Modifier.fillMaxWidth().padding(bottom=8.dp),verticalAlignment=Alignment.CenterVertically){Text("FEATURE",Modifier.weight(1f),fontWeight=FontWeight.Bold);Text("FREE",Modifier.width(55.dp),fontWeight=FontWeight.Bold);Text("PRO",Modifier.width(55.dp),fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary)};rows.forEach{(label,free,pro)->Row(Modifier.fillMaxWidth().padding(vertical=7.dp),verticalAlignment=Alignment.CenterVertically){Text(label,Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium);Icon(if(free)Icons.Default.CheckCircle else Icons.Default.Lock,null,Modifier.width(55.dp).size(20.dp),tint=if(free)Color(0xFF27AE60)else Color(0xFF8A94A6));Icon(if(pro)Icons.Default.CheckCircle else Icons.Default.Lock,null,Modifier.width(55.dp).size(20.dp),tint=Color(0xFFFFB21A))}}}}};item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(20.dp)),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer)){Column(Modifier.fillMaxWidth().padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)){Icon(Icons.Default.Star,null,Modifier.size(38.dp),tint=Color(0xFFFFB21A));Text(if(active)"PREMIUM ACTIVE" else "RSS DATA RECOVERY PREMIUM",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.ExtraBold);Text(if(active)"All recovery capabilities are unlocked." else "Unlock the complete recovery toolkit.",fontWeight=FontWeight.SemiBold,textAlign=androidx.compose.ui.text.style.TextAlign.Center);if(!active)Button(onClick=onUpgrade,Modifier.fillMaxWidth()){Text("UPGRADE NOW")}}}}}}}
+@Composable
+private fun PremiumScreen(active: Boolean, onUpgrade: () -> Unit) {
+    val rows = listOf(
+        Triple("Quick image recovery", true, true),
+        Triple("Deep recovery engine", false, true),
+        Triple("Audio & video recovery", false, true),
+        Triple("Documents & files", false, true),
+        Triple("Original file names", false, true),
+        Triple("Original metadata", false, true),
+        Triple("Original quality", false, true),
+        Triple("Large batch recovery", false, true),
+        Triple("Advanced duplicate detection", false, true),
+        Triple("Priority recovery", false, true),
+        Triple("Recovery destination control", true, true),
+        Triple("Recovery history", true, true),
+        Triple("App lock & biometric", true, true)
+    )
+
+    LazyColumn(
+        Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        item {
+            Text(
+                "FEATURE COMPARISON",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                "FREE vs PRO recovery capabilities",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        item {
+            Card(
+                Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(18.dp)),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("FEATURE", Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                        Text("FREE", Modifier.width(55.dp), fontWeight = FontWeight.Bold)
+                        Text(
+                            "PRO",
+                            Modifier.width(55.dp),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    rows.forEach { (label, free, pro) ->
+                        Row(
+                            Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            Icon(
+                                if (free) Icons.Default.CheckCircle else Icons.Default.Lock,
+                                null,
+                                Modifier.width(55.dp).size(20.dp),
+                                tint = if (free) Color(0xFF27AE60) else Color(0xFF8A94A6)
+                            )
+                            Icon(
+                                if (pro) Icons.Default.CheckCircle else Icons.Default.Lock,
+                                null,
+                                Modifier.width(55.dp).size(20.dp),
+                                tint = Color(0xFFFFB21A)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Card(
+                Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(20.dp)),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.Star, null, Modifier.size(38.dp), tint = Color(0xFFFFB21A))
+                    Text(
+                        if (active) "PREMIUM ACTIVE" else "RSS DATA RECOVERY PREMIUM",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        if (active) "All recovery capabilities are unlocked."
+                        else "Unlock the complete recovery toolkit.",
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    if (!active) {
+                        Button(onClick = onUpgrade, Modifier.fillMaxWidth()) {
+                            Text("UPGRADE NOW")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable private fun HistoryScreen(prefs: SharedPreferences) {
     val lastScan = prefs.getString("last_scan", null)
