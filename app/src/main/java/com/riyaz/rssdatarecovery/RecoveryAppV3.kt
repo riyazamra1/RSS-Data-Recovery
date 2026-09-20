@@ -121,7 +121,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 
 @Composable
 private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF2EA7FF)) {
-    Box(modifier.background(tint.copy(alpha = 0.18f), androidx.compose.foundation.shape.CircleShape).graphicsLayer {
+    Box(modifier.background(tint.copy(alpha = 0.06f), androidx.compose.foundation.shape.CircleShape).graphicsLayer {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) renderEffect = BlurEffect(20f, 20f, TileMode.Clamp)
     })
 }
@@ -318,7 +318,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                     Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.surface)
-                        .graphicsLayer { if (!dark && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) renderEffect = BlurEffect(10f, 10f, TileMode.Clamp) }
+                        .graphicsLayer { if (!dark && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) renderEffect = BlurEffect(6f, 6f, TileMode.Clamp) }
                         .padding(14.dp)
                 ) {
                     Box(Modifier.fillMaxSize()) {
@@ -644,7 +644,7 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
         setProgress(0f)
         scanJob = scope.launch {
             try {
-                val result = queryFiles(context, category) { found, total ->
+                val result = queryFiles(context, category) { processed, found, total ->
                     withContext(Dispatchers.Main) { setProgress(if (total > 0) found.toFloat() / total.toFloat() else 0f) }
                 }
                 setProgress(1f)
@@ -715,7 +715,7 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
     }
 }
 
-private suspend fun queryFiles(context: Context, category: Category?, onProgress: suspend (found: Int, total: Int) -> Unit = { _, _ -> }): List<FoundFile> = withContext(Dispatchers.IO) {
+private suspend fun queryFiles(context: Context, category: Category?, onProgress: suspend (processed: Int, found: Int, total: Int) -> Unit = { _, _, _ -> }): List<FoundFile> = withContext(Dispatchers.IO) {
     val result = mutableListOf<FoundFile>()
     val resolver = context.contentResolver
     val uri = MediaStore.Files.getContentUri("external")
@@ -763,7 +763,7 @@ private suspend fun queryFiles(context: Context, category: Category?, onProgress
             if (category == null || category == kind) {
                 result += FoundFile(it.getString(nameIndex) ?: "Unnamed file", size, Uri.withAppendedPath(uri, it.getLong(idIndex).toString()), kind, it.getLong(dateIndex), trashed)
             }
-            if (processedRows == 1 || processedRows % 10 == 0 || processedRows == totalRows) onProgress(result.size, totalRows)
+            if (processedRows == 1 || processedRows % 10 == 0 || processedRows == totalRows) onProgress(processedRows, result.size, totalRows)
         }
     }
     result
@@ -1000,11 +1000,17 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
         files.forEachIndexed { index, file ->
             try {
                 if (file.isTrashed && Build.VERSION.SDK_INT >= 30) {
+                    if (!premium && file.category != Category.IMAGE) {
+                        failed++
+                        return@forEachIndexed
+                    }
                     val values = android.content.ContentValues().apply { put(MediaStore.MediaColumns.IS_TRASHED, 0) }
                     if (context.contentResolver.update(file.uri, values, null, null) <= 0) throw IllegalStateException("TRASH RESTORE FAILED")
-                    recovered++
-                    restoredFromTrash++
-                    return@forEachIndexed
+                    if (premium) {
+                        recovered++
+                        restoredFromTrash++
+                        return@forEachIndexed
+                    }
                 }
                 if (!premium && file.category != Category.IMAGE) {
                     failed++
