@@ -806,10 +806,6 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
                             Text("${files.size} files found", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        FilterChip(selected = !duplicateOnly, onClick = { duplicateOnly = false }, label = { Text("ALL") })
-                        FilterChip(selected = duplicateOnly, onClick = { duplicateOnly = true }, label = { Text("DUPLICATES ${duplicateFiles.size}") })
-                    }
                 }
             }
         }
