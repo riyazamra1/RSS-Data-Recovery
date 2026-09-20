@@ -1,8 +1,8 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Constrain the artwork to a compact centered 64dp splash icon. -->
+    <!-- Compact centered artwork; deliberately smaller than the system splash icon bounds. -->
     <item
-        android:width="64dp"
-        android:height="64dp"
+        android:width="40dp"
+        android:height="40dp"
         android:gravity="center">
         <bitmap
             android:src="@drawable/rss_data_recovery_splash_logo"
