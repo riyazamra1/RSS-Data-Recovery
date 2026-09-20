@@ -10,9 +10,21 @@ import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -23,6 +35,7 @@ import java.net.URL
 
 class MainActivity : FragmentActivity() {
     private var authenticated = false
+    private var showStartupSplash by mutableStateOf(true)
     private var appLocked by mutableStateOf(false)
     private var authInProgress = false
     private var resetPinAfterBiometric = false
@@ -31,7 +44,23 @@ class MainActivity : FragmentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         setContent {
-            RecoveryAppV3(
+            LaunchedEffect(Unit) {
+                kotlinx.coroutines.delay(850)
+                showStartupSplash = false
+            }
+            if (showStartupSplash) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.rss_data_recovery_logo),
+                        contentDescription = "RSS Data Recovery",
+                        modifier = Modifier.size(96.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            } else RecoveryAppV3(
                 appLocked = appLocked,
                 onUnlock = { authenticate() },
                 onPinUnlock = { pin -> unlockWithPin(pin) },
