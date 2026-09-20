@@ -336,7 +336,6 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                                 BlurMenuItem("Deep Recovery",Icons.Default.Search,Color(0xFF8E44AD),page==Page.SCAN && mode==Mode.DEEP){mode=Mode.DEEP;category=null;navigate(Page.SCAN)}
                                 BlurMenuItem("Recovery by Category",Icons.Default.Category,Color(0xFF18B7A0),showCategoryPicker || (page==Page.SCAN && category!=null)){showCategoryPicker=true;drawerOpen=false}
                                 BlurMenuItem("Results",Icons.Default.Folder,Color(0xFF18B7A0),page==Page.RESULTS){navigate(Page.RESULTS)}
-                                BlurMenuItem("Duplicate Check",Icons.Default.ContentCopy,Color(0xFFE67E22),page==Page.RESULTS){ scanning=true; progress=0f; scope.launch { try { val result=queryFiles(context,null); val duplicateKeys=result.groupingBy{it.name.trim().lowercase()+"|"+it.size}.eachCount().filterValues{it>1}.keys; files=result.filter{it.name.trim().lowercase()+"|"+it.size in duplicateKeys}; count=files.size; progress=1f; navigate(Page.RESULTS) } finally { scanning=false } } }
                                 BlurMenuItem("Premium",Icons.Default.Star,Color(0xFFFFB21A),page==Page.PREMIUM){navigate(Page.PREMIUM)}
                                 BlurMenuItem("Recovery History",Icons.Default.History,Color(0xFF9B5CFF),page==Page.HISTORY){navigate(Page.HISTORY)}
                                 BlurMenuItem("Settings",Icons.Default.Settings,Color(0xFF4F7CFF),page==Page.SETTINGS){navigate(Page.SETTINGS)}
@@ -611,7 +610,7 @@ private fun pageTitle(page: Page, mode: Mode): String = when (page) {
 
 @Composable private fun FeaturesScreen(onQuick:()->Unit,onDeep:()->Unit,onResults:()->Unit,onPremium:()->Unit){
     val features=listOf(Triple("Quick Recovery",Icons.Default.FlashOn,Color(0xFFE67E22)),Triple("Deep Recovery",Icons.Default.Search,Color(0xFF8E44AD)),Triple("Category Recovery",Icons.Default.Category,Color(0xFF18B7A0)),Triple("Results & Preview",Icons.Default.Folder,Color(0xFF4F7CFF)),Triple("Recovery History",Icons.Default.History,Color(0xFF9B5CFF)),Triple("App Lock & PIN",Icons.Default.Lock,Color(0xFFE74C3C)),Triple("Premium Recovery",Icons.Default.Star,Color(0xFFFFB21A)))
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Text("APP FEATURES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("Everything available in RSS Data Recovery.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};items(features){item->Card(Modifier.fillMaxWidth().clickable{when(item.first){"Quick Recovery","Category Recovery"->onQuick();"Deep Recovery"->onDeep();"Results & Preview","Duplicate Detection"->onResults();"Premium Recovery"->onPremium()}}.shadow(2.dp,RoundedCornerShape(17.dp)),shape=RoundedCornerShape(17.dp),elevation=CardDefaults.cardElevation(1.dp)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(44.dp).background(item.third.copy(alpha=.12f),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){Icon(item.second,null,tint=item.third,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Text(item.first,Modifier.weight(1f),fontWeight=FontWeight.Bold);Icon(Icons.Default.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)}}}}
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Text("APP FEATURES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("Everything available in RSS Data Recovery.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};items(features){item->Card(Modifier.fillMaxWidth().clickable{when(item.first){"Quick Recovery","Category Recovery"->onQuick();"Deep Recovery"->onDeep();"Results & Preview"->onResults();"Premium Recovery"->onPremium()}}.shadow(2.dp,RoundedCornerShape(17.dp)),shape=RoundedCornerShape(17.dp),elevation=CardDefaults.cardElevation(1.dp)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(44.dp).background(item.third.copy(alpha=.12f),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){Icon(item.second,null,tint=item.third,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Text(item.first,Modifier.weight(1f),fontWeight=FontWeight.Bold);Icon(Icons.Default.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)}}}}
 }
 
 @Composable private fun HomeScreen(quick:()->Unit,deep:()->Unit,history:()->Unit,onResults:()->Unit,onDuplicateCheck:()->Unit,onCategory:(Category)->Unit){
@@ -797,7 +796,6 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
     var showConfirm by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    var duplicateOnly by remember { mutableStateOf(false) }
     var pendingRecovery by remember { mutableStateOf<List<FoundFile>>(emptyList()) }
     val trashWriteLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         val pending = pendingRecovery
@@ -811,11 +809,7 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
             message = "SYSTEM RECOVERY PERMISSION WAS NOT GRANTED."
         }
     }
-    val duplicateKeys = files.groupingBy { it.name.trim().lowercase() + "|" + it.size }.eachCount().filterValues { it > 1 }.keys
-    val duplicateFiles = files.filter { it.name.trim().lowercase() + "|" + it.size in duplicateKeys }
-
     val visible = files.filter { it.name.contains(search, true) }.let { filtered ->
-        val duplicateFiltered = if (duplicateOnly) filtered.filter { file -> file.name.trim().lowercase() + "|" + file.size in duplicateKeys } else filtered
         when (sort) {
             1 -> duplicateFiltered.sortedByDescending(FoundFile::size)
             2 -> duplicateFiltered.sortedByDescending(FoundFile::modified)
@@ -833,7 +827,7 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text("RECOVERY RESULTS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-                            Text("${files.size} scanned • ${duplicateFiles.size} duplicate candidates", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${files.size} files found", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -847,19 +841,6 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
             item {
                 Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(18.dp)),shape=RoundedCornerShape(18.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer)){
                     Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Star,null,tint=Color(0xFFFFB21A),modifier=Modifier.size(28.dp));Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)){Text("UNLOCK MORE RECOVERY",fontWeight=FontWeight.ExtraBold);Text("Deep recovery, audio, video, files, original metadata and quality.",style=MaterialTheme.typography.bodySmall)};TextButton(onClick=upgrade){Text("UPGRADE")}}
-                }
-            }
-        }
-        if (duplicateFiles.isNotEmpty()) item {
-            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(18.dp)), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF00A6A6).copy(alpha = .08f))) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ContentCopy, null, tint = Color(0xFF00A6A6), modifier = Modifier.size(28.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("DUPLICATE CHECK", fontWeight = FontWeight.ExtraBold)
-                        Text(if (duplicateFiles.isEmpty()) "No duplicate candidates in these results." else "${duplicateFiles.size} files share the same name and size.", style = MaterialTheme.typography.bodySmall)
-                    }
-                    if (duplicateFiles.isNotEmpty()) TextButton(onClick = { duplicateOnly = true }) { Text("SHOW") }
                 }
             }
         }
@@ -1231,7 +1212,6 @@ private fun PremiumScreen(active: Boolean, onUpgrade: () -> Unit) {
 private fun AppFeaturesOnboarding(systemDark: Boolean, done: () -> Unit, skip: () -> Unit) {
     val features = listOf(
         Triple("SMART RECOVERY", "Quick and Deep recovery modes help you scan your device with the mode you choose.", Icons.Default.Restore),
-        Triple("DUPLICATE CHECK", "Find duplicate candidates by filename and size, review the results, and keep your storage cleaner.", Icons.Default.ContentCopy),
         Triple("RECOVERY RESULTS", "Review scan counts, categories, and matching files from a dedicated results workspace.", Icons.Default.Assessment),
         Triple("PRIVACY & CONTROL", "App lock, biometric unlock, appearance controls, scan preferences, and recovery history stay under your control.", Icons.Default.Security)
     )
