@@ -1,6 +1,7 @@
 package com.riyaz.rssdatarecovery
 
 import android.Manifest
+import android.accounts.AccountManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -52,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.KeyboardType
@@ -79,7 +81,9 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
     var registered by remember { mutableStateOf(prefs.getBoolean("registered", false)) }
     var welcomed by remember { mutableStateOf(prefs.getBoolean("welcome_done", false)) }
     var featuresDone by remember { mutableStateOf(prefs.getBoolean("features_done", false)) }
+    var featuresSkipped by remember { mutableStateOf(false) }
     var dark by remember { mutableStateOf(prefs.getBoolean("dark", false)) }
+    val systemDark = isSystemInDarkTheme()
     var theme by remember { mutableIntStateOf(prefs.getInt("theme", 0).coerceIn(0, 3)) }
     val palette = palettes[theme]
     val scope = rememberCoroutineScope()
@@ -90,16 +94,19 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
         surface = Color.White,
         surfaceVariant = Color(0xFFF5F6F8)
     )
-    MaterialTheme(colorScheme = scheme) {
+    val onboardingScheme = if (systemDark) darkColorScheme(primary = palette[0], secondary = palette[1]) else lightColorScheme(
+        primary = palette[0], secondary = palette[1], background = Color.White, surface = Color.White, surfaceVariant = Color(0xFFF5F6F8)
+    )
+    MaterialTheme(colorScheme = if (!registered || !welcomed || (!featuresDone && !featuresSkipped)) onboardingScheme else scheme) {
         if (appLocked) {
             LockScreen(prefs, onUnlock, onPinUnlock, onForgotPin)
             return@MaterialTheme
         }
         AnimatedContent(targetState = Triple(registered, welcomed, featuresDone), transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "entry") { state ->
             when {
-                !state.first -> RegistrationScreen { name, email -> prefs.edit().putBoolean("registered", true).putString("name", name).putString("email", email).apply(); registered = true; scope.launch { registerRecoveryCustomer(name, email) } }
-                !state.second -> WelcomeScreen(prefs.getString("name", "USER") ?: "USER") { prefs.edit().putBoolean("welcome_done", true).apply(); welcomed = true }
-                !state.third -> AppFeaturesOnboarding { prefs.edit().putBoolean("features_done", true).apply(); featuresDone = true }
+                !state.first -> RegistrationScreen(systemDark) { name, email -> prefs.edit().putBoolean("registered", true).putString("name", name).putString("email", email).apply(); registered = true; scope.launch { registerRecoveryCustomer(name, email) } }
+                !state.second -> WelcomeScreen(prefs.getString("name", "USER") ?: "USER", systemDark) { prefs.edit().putBoolean("welcome_done", true).apply(); welcomed = true }
+                !state.third -> AppFeaturesOnboarding(systemDark, { prefs.edit().putBoolean("features_done", true).apply(); featuresDone = true }, { featuresSkipped = true })
                 else -> RecoveryMain(prefs, dark, { dark = it; prefs.edit().putBoolean("dark", it).apply() }, theme, { theme = it; prefs.edit().putInt("theme", it).apply() })
             }
         }
@@ -113,14 +120,14 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
     })
 }
 
-@Composable private fun AnimatedBackdrop() {
+@Composable private fun AnimatedBackdrop(dark: Boolean = true) {
     val t = rememberInfiniteTransition(label = "bg")
     val x by t.animateFloat(0f, 1f, infiniteRepeatable(tween(5200), RepeatMode.Reverse), label = "x")
     val y by t.animateFloat(0f, 1f, infiniteRepeatable(tween(6800), RepeatMode.Reverse), label = "y")
     val glow by t.animateFloat(.10f, .22f, infiniteRepeatable(tween(2600), RepeatMode.Reverse), label = "glow")
-    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF07111F), Color(0xFF17304A), Color(0xFF090D16)), start = androidx.compose.ui.geometry.Offset(x * 1100f, y * 500f), end = androidx.compose.ui.geometry.Offset((1f - x) * 700f, 1500f)))) {
-        Box(Modifier.offset(x = (x * 90f - 45f).dp, y = (y * 120f - 60f).dp).size(260.dp).background(Color(0xFF2EA7FF).copy(alpha = glow), androidx.compose.foundation.shape.CircleShape))
-        Box(Modifier.align(Alignment.BottomEnd).offset(x = (-x * 70f).dp, y = (-y * 90f).dp).size(220.dp).background(Color(0xFFB7791F).copy(alpha = glow * .72f), androidx.compose.foundation.shape.CircleShape))
+    Box(Modifier.fillMaxSize().background(Brush.linearGradient(if (dark) listOf(Color(0xFF07111F), Color(0xFF17304A), Color(0xFF090D16)) else listOf(Color.White, Color(0xFFF4F7FB), Color.White), start = androidx.compose.ui.geometry.Offset(x * 1100f, y * 500f), end = androidx.compose.ui.geometry.Offset((1f - x) * 700f, 1500f)))) {
+        Box(Modifier.offset(x = (x * 90f - 45f).dp, y = (y * 120f - 60f).dp).size(260.dp).background(Color(0xFF2EA7FF).copy(alpha = if (dark) glow else glow * .55f), androidx.compose.foundation.shape.CircleShape))
+        Box(Modifier.align(Alignment.BottomEnd).offset(x = (-x * 70f).dp, y = (-y * 90f).dp).size(220.dp).background(Color(0xFFB7791F).copy(alpha = glow * .48f), androidx.compose.foundation.shape.CircleShape))
     }
 }
 
@@ -169,38 +176,70 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
     }
 }
 
-@Composable private fun RegistrationScreen(done: (String, String) -> Unit) {
-    var name by remember { mutableStateOf("") }; var email by remember { mutableStateOf("") }; var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(120); visible = true }
-    Box(Modifier.fillMaxSize()) { AnimatedBackdrop(); SoftBlurGlow(Modifier.align(Alignment.Center).size(330.dp), Color(0xFF2EA7FF)); Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        AnimatedVisibility(visible, enter=fadeIn(tween(450))+scaleIn(initialScale=.94f,animationSpec=tween(500))+slideInVertically(initialOffsetY={it/12},animationSpec=tween(500))) {
-            Card(Modifier.fillMaxWidth().padding(horizontal=22.dp,vertical=18.dp).shadow(3.dp,RoundedCornerShape(30.dp)),shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(containerColor=Color(0xFF102033)),elevation=CardDefaults.cardElevation(3.dp)) {
-                Column(Modifier.padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                    AnimatedVisibility(visible,enter=fadeIn(tween(550))+scaleIn(initialScale=.75f,animationSpec=tween(550))){androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(104.dp))}
-                    Text("RSS DATA RECOVERY",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("CREATE YOUR PROFILE",color=Color.White,fontWeight=FontWeight.Bold)
-                    OutlinedTextField(name,{name=it},Modifier.fillMaxWidth(),label={Text("FULL NAME",color=Color.White)},leadingIcon={Icon(Icons.Default.Person,null,tint=Color(0xFF4F7CFF))},singleLine=true,textStyle=LocalTextStyle.current.copy(color=Color.White),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Text))
-                    OutlinedTextField(email,{email=it},Modifier.fillMaxWidth(),label={Text("EMAIL ADDRESS",color=Color.White)},leadingIcon={Icon(Icons.Default.Email,null,tint=Color(0xFF18B7A0))},singleLine=true,textStyle=LocalTextStyle.current.copy(color=Color.White),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Email))
-                    Button(onClick={done(name.trim(),email.trim())},Modifier.fillMaxWidth(),enabled=name.trim().length>1&&email.contains("@")){Text("CONTINUE")}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun RegistrationScreen(systemDark: Boolean, done: (String, String) -> Unit) {
+    val context = LocalContext.current
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+    var visible by remember { mutableStateOf(false) }
+    val deviceEmails = remember {
+        buildList {
+            runCatching { AccountManager.get(context).getAccountsByType("com.google").map { it.name } }.getOrNull()?.let { addAll(it) }
+            val stored = context.getSharedPreferences("rss_recovery", Context.MODE_PRIVATE).getString("email", "").orEmpty()
+            if (stored.isNotBlank()) add(stored)
+        }.distinct()
+    }
+    LaunchedEffect(Unit) { delay(120); visible = true; if (email.isBlank() && deviceEmails.isNotEmpty()) email = deviceEmails.first() }
+    Box(Modifier.fillMaxSize()) {
+        AnimatedBackdrop(systemDark)
+        SoftBlurGlow(Modifier.align(Alignment.Center).size(330.dp), Color(0xFF2EA7FF))
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            AnimatedVisibility(visible, enter = fadeIn(tween(450)) + scaleIn(initialScale = .94f, animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(500))) {
+                Card(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 18.dp).shadow(3.dp, RoundedCornerShape(30.dp)), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .96f)), elevation = CardDefaults.cardElevation(3.dp)) {
+                    Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(104.dp))
+                        Text("RSS DATA RECOVERY", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                        Text("CREATE YOUR PROFILE", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("FULL NAME") }, leadingIcon = { Icon(Icons.Default.Person, null, tint = Color(0xFF4F7CFF)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
+                        ExposedDropdownMenuBox(expanded = expanded && deviceEmails.size > 1, onExpandedChange = { if (deviceEmails.size > 1) expanded = !expanded }) {
+                            OutlinedTextField(email, { if (deviceEmails.size <= 1) email = it }, Modifier.fillMaxWidth().menuAnchor(), label = { Text("EMAIL ADDRESS") }, leadingIcon = { Icon(Icons.Default.Email, null, tint = Color(0xFF18B7A0)) }, trailingIcon = { if (deviceEmails.size > 1) ExposedDropdownMenuDefaults.TrailingIcon(expanded) }, singleLine = true, readOnly = deviceEmails.size > 1, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
+                            if (deviceEmails.size > 1) ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                deviceEmails.forEach { account -> DropdownMenuItem(text = { Text(account) }, leadingIcon = { Icon(Icons.Default.AccountCircle, null, tint = Color(0xFF4F7CFF)) }, onClick = { email = account; expanded = false }) }
+                            }
+                        }
+                        if (deviceEmails.size > 1) Text("SELECT AN EMAIL ACCOUNT FROM THIS DEVICE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        else if (deviceEmails.size == 1) Text("EMAIL AUTOMATICALLY DETECTED FROM THIS DEVICE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Button(onClick = { done(name.trim(), email.trim()) }, Modifier.fillMaxWidth(), enabled = name.trim().length > 1 && email.contains("@")) { Text("CONTINUE") }
+                    }
                 }
             }
         }
-    }}
+    }
 }
 
-@Composable private fun WelcomeScreen(name:String,done:()->Unit){
-    var visible by remember{mutableStateOf(false)};LaunchedEffect(Unit){delay(120);visible=true};val pulse=rememberInfiniteTransition(label="welcomePulse");val alpha by pulse.animateFloat(.72f,1f,infiniteRepeatable(tween(1100),RepeatMode.Reverse),label="welcomeAlpha")
-    Box(Modifier.fillMaxSize()){AnimatedBackdrop();SoftBlurGlow(Modifier.align(Alignment.Center).size(330.dp), Color(0xFFB7791F));Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){
-        AnimatedVisibility(visible,enter=fadeIn(tween(500))+scaleIn(initialScale=.94f,animationSpec=tween(500))+slideInVertically(initialOffsetY={it/12},animationSpec=tween(500))){
-            Card(Modifier.fillMaxWidth().padding(horizontal=22.dp,vertical=18.dp),shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(containerColor=Color(0xFF102033)),elevation=CardDefaults.cardElevation(3.dp)){
-                Column(Modifier.padding(28.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)){
-                    AnimatedVisibility(visible,enter=fadeIn(tween(650))+scaleIn(initialScale=.78f,animationSpec=tween(650))){androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(86.dp))}
-                    Text("CONGRATULATIONS 👏🎉",color=Color(0xFFFFD166).copy(alpha=alpha),style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold)
-                    AnimatedVisibility(visible,enter=fadeIn(tween(900))+slideInVertically(initialOffsetY={it/3},animationSpec=tween(700))){Text("WELCOME, $name!",color=Color.White.copy(alpha=alpha),style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)}
-                    Text("YOUR RECOVERY SPACE IS READY.",color=Color.White,fontWeight=FontWeight.SemiBold);Button(onClick=done,Modifier.fillMaxWidth()){Text("GET STARTED")}
+@Composable private fun WelcomeScreen(name: String, systemDark: Boolean, done: () -> Unit) {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { delay(120); visible = true }
+    val pulse = rememberInfiniteTransition(label = "welcomePulse")
+    val alpha by pulse.animateFloat(.72f, 1f, infiniteRepeatable(tween(1100), RepeatMode.Reverse), label = "welcomeAlpha")
+    Box(Modifier.fillMaxSize()) {
+        AnimatedBackdrop(systemDark)
+        SoftBlurGlow(Modifier.align(Alignment.Center).size(330.dp), Color(0xFFB7791F))
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            AnimatedVisibility(visible, enter = fadeIn(tween(500)) + scaleIn(initialScale = .94f, animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(500))) {
+                Card(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 18.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .96f)), elevation = CardDefaults.cardElevation(3.dp)) {
+                    Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(86.dp))
+                        Text("CONGRATULATIONS 👏🎉", color = Color(0xFFFFD166).copy(alpha = alpha), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                        Text("WELCOME, $name!", color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text("YOUR RECOVERY SPACE IS READY.", fontWeight = FontWeight.SemiBold)
+                        Button(onClick = done, Modifier.fillMaxWidth()) { Text("GET STARTED") }
+                    }
                 }
             }
         }
-    }}
+    }
 }
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -270,7 +309,8 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surface)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = if (dark) .88f else .97f))
+                        .graphicsLayer { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) renderEffect = BlurEffect(20f, 20f, TileMode.Clamp) }
                         .padding(14.dp)
                 ) {
                     Box(Modifier.fillMaxSize()) {
@@ -283,7 +323,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                                 if(email.isNotBlank()) Text(email,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
                             }
                             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal=4.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
-                                GlassMenuItem("Home",Icons.Default.Home,Color(0xFF4F7CFF),page==Page.HOME){navigate(Page.HOME)}
+                                BlurMenuItem("Home",Icons.Default.Home,Color(0xFF4F7CFF),page==Page.HOME){navigate(Page.HOME)}
                                 GlassMenuItem("App Features",Icons.Default.AutoAwesome,Color(0xFFFFB21A),page==Page.FEATURES){navigate(Page.FEATURES)}
                                 GlassMenuItem("Recovery",Icons.Default.Restore,Color(0xFFFF8A3D),page==Page.SCAN){mode=Mode.QUICK;category=null;navigate(Page.SCAN)}
                                 GlassMenuItem("Results",Icons.Default.Folder,Color(0xFF18B7A0),page==Page.RESULTS){navigate(Page.RESULTS)}
@@ -318,7 +358,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                             )
                             if (page == Page.HOME) {
                                 Text(
-                                    "Secure recovery, simply designed",
+                                    "",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -463,7 +503,7 @@ private fun GlassPanel(
 }
 
 @Composable
-private fun GlassMenuItem(
+private fun BlurMenuItem(
     title: String,
     icon: ImageVector,
     iconColor: Color,
@@ -476,8 +516,7 @@ private fun GlassMenuItem(
             .fillMaxWidth()
             .padding(vertical = 3.dp)
             .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(if (selected) 1.dp else 0.dp,MaterialTheme.colorScheme.primary.copy(alpha = if (selected) .45f else 0f),shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (selected) .92f else .72f))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -685,6 +724,7 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
     }
 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), label = { Text("SEARCH RECOVERY RESULTS") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true) }
         item {
             Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(20.dp)), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -702,7 +742,6 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
                     }
                 }
             }
-            OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), label = { Text("SEARCH RECOVERY RESULTS") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true)
         }
         if (!premium && visible.isNotEmpty()) {
             item {
@@ -711,9 +750,8 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
                 }
             }
         }
-        item {
-            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(18.dp)), shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF00A6A6).copy(alpha = .08f))) {
+        if (duplicateFiles.isNotEmpty()) item {
+            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(18.dp)), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF00A6A6).copy(alpha = .08f))) {
                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.ContentCopy, null, tint = Color(0xFF00A6A6), modifier = Modifier.size(28.dp))
                     Spacer(Modifier.width(10.dp))
@@ -767,13 +805,13 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
         item {
             Button(onClick = {
                 val chosen = files.filter { it.uri in selected }
-                if (chosen.any { it.category != Category.IMAGE } && !premium) {
+                if (!premium) {
                     upgrade()
                 } else if (chosen.isNotEmpty()) {
                     showConfirm = true
                 }
             }, modifier = Modifier.fillMaxWidth(), enabled = selected.isNotEmpty()) {
-                Text(if (premium) "RECOVER SELECTED" else "RECOVER / UPGRADE")
+                Text(if (premium) "RECOVER SELECTED" else "RECOVER SELECTED")
             }
         }
         message?.let { text ->
@@ -1048,7 +1086,7 @@ private fun PremiumScreen(active: Boolean, onUpgrade: () -> Unit) {
 
 
 @Composable
-private fun AppFeaturesOnboarding(done: () -> Unit) {
+private fun AppFeaturesOnboarding(systemDark: Boolean, done: () -> Unit, skip: () -> Unit) {
     val features = listOf(
         Triple("SMART RECOVERY", "Quick and Deep recovery modes help you scan your device with the mode you choose.", Icons.Default.Restore),
         Triple("DUPLICATE CHECK", "Find duplicate candidates by filename and size, review the results, and keep your storage cleaner.", Icons.Default.ContentCopy),
@@ -1057,78 +1095,33 @@ private fun AppFeaturesOnboarding(done: () -> Unit) {
     )
     var index by remember { mutableIntStateOf(0) }
     val pulse = rememberInfiniteTransition(label = "featurePulse")
-    val scale by pulse.animateFloat(0.96f, 1.02f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "featureScale")
-
+    val scale by pulse.animateFloat(0.98f, 1.02f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "featureScale")
     Box(Modifier.fillMaxSize()) {
-        AnimatedBackdrop()
-        SoftBlurGlow(Modifier.align(Alignment.Center).size(340.dp), palettes[index % palettes.size][1])
-        Column(
-            Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text("RSS DATA RECOVERY", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp)
-            Spacer(Modifier.height(6.dp))
-            Text("APP FEATURES", color = Color.White.copy(alpha = 0.78f), fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(22.dp))
-            Card(
-                Modifier.fillMaxWidth().graphicsLayer { scaleX = scale; scaleY = scale },
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF102033)),
-                elevation = CardDefaults.cardElevation(4.dp)
-            ) {
-                AnimatedContent(
-                    targetState = index,
-                    transitionSpec = { fadeIn(tween(280)) togetherWith fadeOut(tween(180)) },
-                    label = "featurePage"
-                ) { pageIndex ->
-                    val feature = features[pageIndex]
-                    Column(
-                        Modifier.fillMaxWidth().padding(28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Icon(feature.third, null, Modifier.size(64.dp), tint = palettes[pageIndex % palettes.size][0])
-                        Text(feature.first, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 21.sp)
-                        Text(
-                            feature.second,
-                            color = Color.White.copy(alpha = 0.82f),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            lineHeight = 22.sp
-                        )
-                    }
+        AnimatedBackdrop(systemDark)
+        SoftBlurGlow(Modifier.align(Alignment.Center).size(360.dp), palettes[index % palettes.size][1])
+        Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 30.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text("RSS DATA RECOVERY", fontWeight = FontWeight.ExtraBold, fontSize = 24.sp)
+            Text("APP FEATURES", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(28.dp))
+            AnimatedContent(targetState = index, transitionSpec = { fadeIn(tween(280)) togetherWith fadeOut(tween(180)) }, label = "featurePage") { pageIndex ->
+                val feature = features[pageIndex]
+                Column(Modifier.fillMaxWidth().graphicsLayer { scaleX = scale; scaleY = scale }.padding(horizontal = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Icon(feature.third, null, Modifier.size(86.dp), tint = palettes[pageIndex % palettes.size][0])
+                    Text(feature.first, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(feature.second, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 24.sp)
                 }
             }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(28.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                features.indices.forEach { i ->
-                    Box(
-                        Modifier.size(if (i == index) 24.dp else 8.dp, 8.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (i == index) Color.White else Color.White.copy(alpha = 0.35f))
-                    )
-                }
+                features.indices.forEach { i -> Box(Modifier.size(if (i == index) 24.dp else 8.dp, 8.dp).clip(RoundedCornerShape(8.dp)).background(if (i == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = .25f))) }
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(28.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (index > 0) {
-                    OutlinedButton(onClick = { index-- }, Modifier.weight(1f)) { Text("BACK") }
-                } else {
-                    Spacer(Modifier.weight(1f))
-                }
-                Button(
-                    onClick = { if (index == features.lastIndex) done() else index++ },
-                    Modifier.weight(1f)
-                ) {
-                    Text(if (index == features.lastIndex) "START RECOVERY" else "NEXT")
-                }
+                OutlinedButton(onClick = skip, Modifier.weight(1f)) { Text("SKIP FOR NOW") }
+                Button(onClick = { if (index == features.lastIndex) done() else index++ }, Modifier.weight(1f)) { Text(if (index == features.lastIndex) "START RECOVERY" else "NEXT") }
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "${index + 1} / ${features.size}",
-                color = Color.White.copy(alpha = 0.6f),
-                style = MaterialTheme.typography.labelSmall
-            )
+            Spacer(Modifier.height(10.dp))
+            Text("${index + 1} / ${features.size}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
