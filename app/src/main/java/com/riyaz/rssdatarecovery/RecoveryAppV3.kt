@@ -700,13 +700,7 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
             if (scanning) {
                 LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp)); Text("${(progress * 100).toInt()}% • $count FILES"); Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) { OutlinedButton(onClick = { paused = !paused }) { Text(if (paused) "RESUME" else "PAUSE") }; OutlinedButton(onClick = { scanJob?.cancel(); scanJob = null; setScanning(false); paused = false; setProgress(0f) }) { Text("CANCEL") } }
             } else {
-                Text("READY TO SCAN", fontWeight = FontWeight.Bold); Spacer(Modifier.height(9.dp)); Button(onClick = {
-                    if (Build.VERSION.SDK_INT >= 33) {
-                        permissionLauncher.launch(arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_AUDIO))
-                    } else {
-                        launchScanAfterPermission()
-                    }
-                }, modifier = Modifier.fillMaxWidth()) { Text("START SCAN") }
+                Text("READY TO SCAN", fontWeight = FontWeight.Bold); Spacer(Modifier.height(9.dp)); Button(onClick = { requestScanPermissions() }, modifier = Modifier.fillMaxWidth()) { Text("START SCAN") }
             }
         } } }
     }
