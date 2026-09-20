@@ -1068,11 +1068,38 @@ private fun AppFeaturesOnboarding(systemDark: Boolean, done: () -> Unit, skip: (
         Triple("RECOVERY RESULTS", "Review scan counts, categories, and matching files from a dedicated results workspace.", Icons.Default.Assessment),
         Triple("PRIVACY & CONTROL", "App lock, biometric unlock, appearance controls, scan preferences, and recovery history stay under your control.", Icons.Default.Security)
     )
+    val darkBackgrounds = listOf(
+        listOf(Color(0xFF07111F), Color(0xFF123B5D), Color(0xFF0A1020)),
+        listOf(Color(0xFF0A1715), Color(0xFF12483C), Color(0xFF081311)),
+        listOf(Color(0xFF17100A), Color(0xFF55351B), Color(0xFF110C09)),
+        listOf(Color(0xFF130C1D), Color(0xFF382052), Color(0xFF0C0912))
+    )
+    val lightBackgrounds = listOf(
+        listOf(Color.White, Color(0xFFEAF5FF), Color.White),
+        listOf(Color.White, Color(0xFFEAFBF6), Color.White),
+        listOf(Color.White, Color(0xFFFFF5E8), Color.White),
+        listOf(Color.White, Color(0xFFF4EDFF), Color.White)
+    )
     var index by remember { mutableIntStateOf(0) }
     val pulse = rememberInfiniteTransition(label = "featurePulse")
     val scale by pulse.animateFloat(0.98f, 1.02f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "featureScale")
+    val backgroundTransition = androidx.compose.animation.core.updateTransition(index, label = "featureBackground")
     Box(Modifier.fillMaxSize()) {
-        AnimatedBackdrop(systemDark)
+        backgroundTransition.AnimatedContent(
+            transitionSpec = { fadeIn(tween(450)) togetherWith fadeOut(tween(300)) },
+            label = "featureBackground"
+        ) { pageIndex ->
+            Box(Modifier.fillMaxSize().background(Brush.linearGradient(if (systemDark) darkBackgrounds[pageIndex] else lightBackgrounds[pageIndex]))) {
+                Icon(
+                    imageVector = features[pageIndex].third,
+                    contentDescription = null,
+                    modifier = Modifier.align(Alignment.Center).size(340.dp).graphicsLayer {
+                        alpha = if (systemDark) 0.055f else 0.045f
+                    },
+                    tint = palettes[pageIndex % palettes.size][0]
+                )
+            }
+        }
         SoftBlurGlow(Modifier.align(Alignment.Center).size(360.dp), palettes[index % palettes.size][1])
         Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 30.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text("RSS DATA RECOVERY", fontWeight = FontWeight.ExtraBold, fontSize = 24.sp)
