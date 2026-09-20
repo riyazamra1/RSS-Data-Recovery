@@ -7,8 +7,9 @@
     </style>
 
     <!-- Legacy splash fallback for Android versions without the system splash API. -->
-    <style name="Theme.RSSDataRecovery.Splash" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@drawable/rss_splash_background</item>
-        <item name="android:windowActionModeOverlay">true</item>
+    <style name="Theme.RSSDataRecovery.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@android:color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/rss_splash_icon</item>
+        <item name="postSplashScreenTheme">@style/Theme.RSSDataRecovery</item>
     </style>
 </resources>
