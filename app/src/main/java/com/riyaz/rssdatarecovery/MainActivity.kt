@@ -11,12 +11,20 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberInfiniteTransition
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -46,20 +54,34 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             LaunchedEffect(Unit) {
-                kotlinx.coroutines.delay(850)
+                kotlinx.coroutines.delay(900)
                 showStartupSplash = false
             }
             if (showStartupSplash) {
-                Box(
-                    modifier = Modifier.fillMaxSize().background(if (isSystemInDarkTheme()) Color(0xFF111111) else Color.White),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.rss_data_recovery_logo),
-                        contentDescription = "RSS Data Recovery",
-                        modifier = Modifier.size(180.dp),
-                        contentScale = ContentScale.Fit
+                val systemDark = isSystemInDarkTheme()
+                val splashPulse = rememberInfiniteTransition(label = "splashPulse")
+                val logoScale by splashPulse.animateFloat(
+                    0.96f, 1.02f,
+                    infiniteRepeatable(tween(900), RepeatMode.Reverse),
+                    label = "splashLogoScale"
+                )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AnimatedBackdrop(systemDark)
+                    SoftBlurGlow(
+                        modifier = Modifier.align(Alignment.Center).size(250.dp),
+                        tint = if (systemDark) Color(0xFF2EA7FF) else Color(0xFFFFD166)
                     )
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Image(
+                            painter = painterResource(id = R.drawable.rss_data_recovery_logo),
+                            contentDescription = "RSS Data Recovery",
+                            modifier = Modifier.size(160.dp).graphicsLayer {
+                                scaleX = logoScale
+                                scaleY = logoScale
+                            },
+                            contentScale = ContentScale.Fit
+                        )
+                    }
                 }
             } else RecoveryAppV3(
                 appLocked = appLocked,
