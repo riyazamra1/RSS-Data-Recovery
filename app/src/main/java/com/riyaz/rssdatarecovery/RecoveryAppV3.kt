@@ -108,7 +108,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
             LockScreen(prefs, onUnlock, onPinUnlock, onForgotPin)
             return@MaterialTheme
         }
-        AnimatedContent(targetState = Triple(registered, welcomed, featuresDone), transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "entry") { state ->
+        AnimatedContent(targetState = Triple(registered, welcomed, featuresDone || featuresSkipped), transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "entry") { state ->
             when {
                 !state.first -> RegistrationScreen(systemDark) { name, email -> prefs.edit().putBoolean("registered", true).putString("name", name).putString("email", email).apply(); registered = true; scope.launch { registerRecoveryCustomer(name, email) } }
                 !state.second -> WelcomeScreen(prefs.getString("name", "USER") ?: "USER", systemDark) { prefs.edit().putBoolean("welcome_done", true).apply(); welcomed = true }
