@@ -22,13 +22,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -64,10 +64,11 @@ class MainActivity : FragmentActivity() {
                     label = "splashLogoScale"
                 )
                 Box(modifier = Modifier.fillMaxSize()) {
-                    AnimatedBackdrop(systemDark)
-                    SoftBlurGlow(
-                        modifier = Modifier.align(Alignment.Center).size(250.dp),
-                        tint = if (systemDark) Color(0xFF2EA7FF) else Color(0xFFFFD166)
+                    Box(Modifier.fillMaxSize().background(if (systemDark) Color(0xFF07111F) else Color.White))
+                    Box(
+                        Modifier.align(Alignment.Center).size(260.dp)
+                            .graphicsLayer { alpha = if (systemDark) 0.16f else 0.08f }
+                            .background(if (systemDark) Color(0xFF2EA7FF) else Color(0xFFFFD166), androidx.compose.foundation.shape.CircleShape)
                     )
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Image(
