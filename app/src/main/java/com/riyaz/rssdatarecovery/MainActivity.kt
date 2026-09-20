@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -50,13 +51,13 @@ class MainActivity : FragmentActivity() {
             }
             if (showStartupSplash) {
                 Box(
-                    modifier = Modifier.fillMaxSize().background(Color.White),
+                    modifier = Modifier.fillMaxSize().background(if (isSystemInDarkTheme()) Color(0xFF111111) else Color.White),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.rss_data_recovery_logo),
                         contentDescription = "RSS Data Recovery",
-                        modifier = Modifier.size(96.dp),
+                        modifier = Modifier.size(180.dp),
                         contentScale = ContentScale.Fit
                     )
                 }
