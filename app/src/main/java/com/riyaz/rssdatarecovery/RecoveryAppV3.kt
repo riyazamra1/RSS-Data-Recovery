@@ -1083,10 +1083,10 @@ private fun AppFeaturesOnboarding(systemDark: Boolean, done: () -> Unit, skip: (
     var index by remember { mutableIntStateOf(0) }
     val pulse = rememberInfiniteTransition(label = "featurePulse")
     val scale by pulse.animateFloat(0.98f, 1.02f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "featureScale")
-    val backgroundTransition = androidx.compose.animation.core.updateTransition(index, label = "featureBackground")
     Box(Modifier.fillMaxSize()) {
-        backgroundTransition.AnimatedContent(
-            transitionSpec = { fadeIn(tween(450)) togetherWith fadeOut(tween(300)) },
+        androidx.compose.animation.Crossfade(
+            targetState = index,
+            animationSpec = tween(450),
             label = "featureBackground"
         ) { pageIndex ->
             Box(Modifier.fillMaxSize().background(Brush.linearGradient(if (systemDark) darkBackgrounds[pageIndex] else lightBackgrounds[pageIndex]))) {
