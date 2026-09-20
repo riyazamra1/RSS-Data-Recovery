@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +28,7 @@ class MainActivity : FragmentActivity() {
     private var resetPinAfterBiometric = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         setContent {
             RecoveryAppV3(
