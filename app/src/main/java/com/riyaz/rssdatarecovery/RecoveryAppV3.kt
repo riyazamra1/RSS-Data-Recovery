@@ -154,7 +154,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                 Icon(Icons.Default.Lock, null, Modifier.size(58.dp), tint = Color(0xFFFFD166))
                 Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 Text("APP LOCKED", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                if (prefs.getBoolean("pin_enabled", false)) {
+                if (prefs.getBoolean("pin_enabled", false) && !prefs.getBoolean("biometric_enabled", false)) {
                     var pin by remember { mutableStateOf("") }
                     Text("ENTER YOUR 6-DIGIT PIN", color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
                     OutlinedTextField(
@@ -260,6 +260,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
     var mode by remember { mutableStateOf(Mode.QUICK) }
     var category by remember { mutableStateOf<Category?>(null) }
     var showCategoryPicker by remember { mutableStateOf(false) }
+    var showRecoveryModePicker by remember { mutableStateOf(false) }
     var drawerOpen by remember { mutableStateOf(false) }
     var files by remember { mutableStateOf(emptyList<FoundFile>()) }
     var scanning by remember { mutableStateOf(false) }
@@ -489,7 +490,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                     Category.values().forEach { item ->
                         val label = item.name.lowercase().replaceFirstChar { it.uppercase() }
                         OutlinedButton(
-                            onClick = { category = item; mode = Mode.QUICK; showCategoryPicker = false; navigate(Page.SCAN) },
+                            onClick = { category = item; showCategoryPicker = false; showRecoveryModePicker = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(when (item) {
@@ -506,6 +507,21 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                 }
             },
             confirmButton = { TextButton(onClick = { showCategoryPicker = false }) { Text("CANCEL") } }
+        )
+    }
+    if (showRecoveryModePicker && category != null) {
+        val selectedCategory = category!!
+        AlertDialog(
+            onDismissRequest = { showRecoveryModePicker = false },
+            title = { Text(categoryInfo(selectedCategory).first.uppercase() + " RECOVERY", fontWeight = FontWeight.ExtraBold) },
+            text = { Text("Choose how you want RSS Data Recovery to scan this category. Quick Recovery is faster; Deep Recovery performs the broader scan.") },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { mode = Mode.QUICK; showRecoveryModePicker = false; navigate(Page.SCAN) }) { Text("QUICK") }
+                    Button(onClick = { mode = Mode.DEEP; showRecoveryModePicker = false; navigate(Page.SCAN) }) { Text("DEEP") }
+                }
+            },
+            dismissButton = { TextButton(onClick = { showRecoveryModePicker = false }) { Text("CANCEL") } }
         )
     }
 }
