@@ -1046,6 +1046,93 @@ private fun PremiumScreen(active: Boolean, onUpgrade: () -> Unit) {
     if(showPinDialog){AlertDialog(onDismissRequest={showPinDialog=false},title={Text(if(prefs.getBoolean("pin_enabled",false))"CHANGE APP PIN"else"SET APP PIN")},text={OutlinedTextField(value=pin,onValueChange={v->if(v.length<=6&&v.all(Char::isDigit))pin=v},modifier=Modifier.fillMaxWidth(),label={Text("6-DIGIT PIN")},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword))},confirmButton={TextButton(enabled=pin.length==6,onClick={prefs.edit().putString("pin_hash",hashPin(pin)).putBoolean("pin_enabled",true).putBoolean("app_lock",true).apply();lock=true;showPinDialog=false;pin=""}){Text("SAVE")}},dismissButton={TextButton(onClick={showPinDialog=false}){Text("CANCEL")}})}
 }
 
+
+@Composable
+private fun AppFeaturesOnboarding(done: () -> Unit) {
+    val features = listOf(
+        Triple("SMART RECOVERY", "Quick and Deep recovery modes help you scan your device with the mode you choose.", Icons.Default.Restore),
+        Triple("DUPLICATE CHECK", "Find duplicate candidates by filename and size, review the results, and keep your storage cleaner.", Icons.Default.ContentCopy),
+        Triple("RECOVERY RESULTS", "Review scan counts, categories, and matching files from a dedicated results workspace.", Icons.Default.Assessment),
+        Triple("PRIVACY & CONTROL", "App lock, biometric unlock, appearance controls, scan preferences, and recovery history stay under your control.", Icons.Default.Security)
+    )
+    var index by remember { mutableIntStateOf(0) }
+    val pulse = rememberInfiniteTransition(label = "featurePulse")
+    val scale by pulse.animateFloat(0.96f, 1.02f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "featureScale")
+
+    Box(Modifier.fillMaxSize()) {
+        AnimatedBackdrop()
+        SoftBlurGlow(Modifier.align(Alignment.Center).size(340.dp), palettes[index % palettes.size][1])
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("RSS DATA RECOVERY", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp)
+            Spacer(Modifier.height(6.dp))
+            Text("APP FEATURES", color = Color.White.copy(alpha = 0.78f), fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(22.dp))
+            Card(
+                Modifier.fillMaxWidth().graphicsLayer { scaleX = scale; scaleY = scale },
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF102033)),
+                elevation = CardDefaults.cardElevation(4.dp)
+            ) {
+                AnimatedContent(
+                    targetState = index,
+                    transitionSpec = { fadeIn(tween(280)) togetherWith fadeOut(tween(180)) },
+                    label = "featurePage"
+                ) { pageIndex ->
+                    val feature = features[pageIndex]
+                    Column(
+                        Modifier.fillMaxWidth().padding(28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(feature.third, null, Modifier.size(64.dp), tint = palettes[pageIndex % palettes.size][0])
+                        Text(feature.first, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 21.sp)
+                        Text(
+                            feature.second,
+                            color = Color.White.copy(alpha = 0.82f),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            lineHeight = 22.sp
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(18.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                features.indices.forEach { i ->
+                    Box(
+                        Modifier.size(if (i == index) 24.dp else 8.dp, 8.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (i == index) Color.White else Color.White.copy(alpha = 0.35f))
+                    )
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (index > 0) {
+                    OutlinedButton(onClick = { index-- }, Modifier.weight(1f)) { Text("BACK") }
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
+                Button(
+                    onClick = { if (index == features.lastIndex) done() else index++ },
+                    Modifier.weight(1f)
+                ) {
+                    Text(if (index == features.lastIndex) "START RECOVERY" else "NEXT")
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "${index + 1} / ${features.size}",
+                color = Color.White.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+    }
+}
+
 @Composable private fun SettingSwitch(title: String, value: Boolean, onChange: (Boolean) -> Unit) { val icon=when{title.contains("DARK")->Icons.Default.DarkMode;title.contains("LOCK")->Icons.Default.Lock;title.contains("HAPTIC")->Icons.Default.Vibration;title.contains("NOTIFICATION")->Icons.Default.Notifications;title.contains("AUTO")->Icons.Default.PlayCircle;title.contains("CONFIRM")->Icons.Default.Verified;title.contains("PREVIEW")->Icons.Default.Visibility;else->Icons.Default.History};val tint=when{title.contains("DARK")->Color(0xFF8E6CFF);title.contains("LOCK")->Color(0xFFE74C3C);title.contains("HAPTIC")->Color(0xFF18B7A0);title.contains("NOTIFICATION")->Color(0xFFFFB21A);title.contains("AUTO")->Color(0xFF4F7CFF);title.contains("CONFIRM")->Color(0xFF27AE60);title.contains("PREVIEW")->Color(0xFF9B5CFF);else->Color(0xFF2980B9)};Row(Modifier.fillMaxWidth().padding(vertical=4.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon,null,Modifier.size(24.dp),tint=tint);Spacer(Modifier.width(10.dp));Text(title,Modifier.weight(1f),fontWeight=FontWeight.Medium);Switch(checked=value,onCheckedChange=onChange)}}
 
 private fun hashPin(pin: String): String = MessageDigest.getInstance("SHA-256").digest(pin.toByteArray()).joinToString("") { it.toString(16).padStart(2, '0') }
