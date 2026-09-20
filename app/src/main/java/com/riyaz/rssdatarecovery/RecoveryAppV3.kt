@@ -70,6 +70,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ensureActive
 import java.text.DateFormat
+import java.text.SimpleDateFormat
 import java.security.MessageDigest
 import java.util.Date
 
@@ -599,7 +600,6 @@ private fun pageTitle(page: Page, mode: Mode): String = when (page) {
 @Composable private fun HomeScreen(quick:()->Unit,deep:()->Unit,history:()->Unit,onResults:()->Unit,onCategory:(Category)->Unit){
     val context=LocalContext.current;var storage by remember{mutableStateOf(storageUsage(context))};LaunchedEffect(Unit){while(true){storage=storageUsage(context);delay(1500)}}
     LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(11.dp)){
-        item{Text("RECOVER YOUR FILES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold)}
         item{Text("RECOVERY BY CATEGORY",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.ExtraBold)}
         item{LazyVerticalGrid(GridCells.Fixed(2),Modifier.fillMaxWidth().height(250.dp),verticalArrangement=Arrangement.spacedBy(9.dp),horizontalArrangement=Arrangement.spacedBy(9.dp),userScrollEnabled=false){items(Category.values().toList()){cat->val info=categoryInfo(cat);ActionCard(info.first,info.second,info.third,{onCategory(cat)},Modifier.fillMaxWidth())}}}
         item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(18.dp)),shape=RoundedCornerShape(18.dp),elevation=CardDefaults.cardElevation(1.dp)){Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Storage,null,tint=Color(0xFF4F7CFF));Spacer(Modifier.width(9.dp));Text("DEVICE STORAGE",fontWeight=FontWeight.Bold)};Text("${storage.first} USED  •  ${storage.second} FREE",style=MaterialTheme.typography.bodySmall);LinearProgressIndicator(progress={storage.third},modifier=Modifier.fillMaxWidth())}}}
@@ -644,7 +644,9 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
         setProgress(0f)
         scanJob = scope.launch {
             try {
-                val result = queryFiles(context, category)
+                val result = queryFiles(context, category) { found, total ->
+                    withContext(Dispatchers.Main) { setProgress(if (total > 0) found.toFloat() / total.toFloat() else 0f) }
+                }
                 setProgress(1f)
                 prefs.edit().putString("last_scan", DateFormat.getDateTimeInstance().format(Date())).putInt("last_count", result.size).apply()
                 done(result)
@@ -713,7 +715,7 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
     }
 }
 
-private suspend fun queryFiles(context: Context, category: Category?): List<FoundFile> = withContext(Dispatchers.IO) {
+private suspend fun queryFiles(context: Context, category: Category?, onProgress: suspend (found: Int, total: Int) -> Unit = { _, _ -> }): List<FoundFile> = withContext(Dispatchers.IO) {
     val result = mutableListOf<FoundFile>()
     val resolver = context.contentResolver
     val uri = MediaStore.Files.getContentUri("external")
@@ -743,7 +745,10 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
         val dateIndex = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
         val mimeIndex = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
         val trashedIndex = if (Build.VERSION.SDK_INT >= 30) it.getColumnIndex(MediaStore.Files.FileColumns.IS_TRASHED) else -1
+        val totalRows = it.count.coerceAtLeast(0)
+        var processedRows = 0
         while (it.moveToNext()) {
+            processedRows++
             val size = it.getLong(sizeIndex)
             val trashed = trashedIndex >= 0 && it.getInt(trashedIndex) != 0
             if (size <= 0L && !trashed) continue
@@ -758,6 +763,7 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
             if (category == null || category == kind) {
                 result += FoundFile(it.getString(nameIndex) ?: "Unnamed file", size, Uri.withAppendedPath(uri, it.getLong(idIndex).toString()), kind, it.getLong(dateIndex), trashed)
             }
+            if (processedRows == 1 || processedRows % 10 == 0 || processedRows == totalRows) onProgress(result.size, totalRows)
         }
     }
     result
@@ -1017,7 +1023,7 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
                     val bitmap = android.graphics.BitmapFactory.decodeStream(resolver.openInputStream(file.uri))
                         ?: throw IllegalStateException("IMAGE DECODE FAILED")
                     val values = android.content.ContentValues().apply {
-                        put(MediaStore.Images.Media.DISPLAY_NAME, "RSS_RECOVERED_\${System.currentTimeMillis()}_\${index + 1}.jpg")
+                        put(MediaStore.Images.Media.DISPLAY_NAME, "RSS_DATA_RECOVERY_" + SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(Date()) + "_" + (index + 1) + ".jpg")
                         put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
                         if (Build.VERSION.SDK_INT >= 29) {
                             put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/RSS Data Recovery")
