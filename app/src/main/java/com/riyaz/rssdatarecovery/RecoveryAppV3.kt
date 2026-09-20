@@ -78,6 +78,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
     val prefs = remember { context.getSharedPreferences("rss_recovery", Context.MODE_PRIVATE) }
     var registered by remember { mutableStateOf(prefs.getBoolean("registered", false)) }
     var welcomed by remember { mutableStateOf(prefs.getBoolean("welcome_done", false)) }
+    var featuresDone by remember { mutableStateOf(prefs.getBoolean("features_done", false)) }
     var dark by remember { mutableStateOf(prefs.getBoolean("dark", false)) }
     var theme by remember { mutableIntStateOf(prefs.getInt("theme", 0).coerceIn(0, 3)) }
     val palette = palettes[theme]
@@ -94,10 +95,11 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
             LockScreen(prefs, onUnlock, onPinUnlock, onForgotPin)
             return@MaterialTheme
         }
-        AnimatedContent(targetState = registered to welcomed, transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "entry") { state ->
+        AnimatedContent(targetState = Triple(registered, welcomed, featuresDone), transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "entry") { state ->
             when {
                 !state.first -> RegistrationScreen { name, email -> prefs.edit().putBoolean("registered", true).putString("name", name).putString("email", email).apply(); registered = true; scope.launch { registerRecoveryCustomer(name, email) } }
                 !state.second -> WelcomeScreen(prefs.getString("name", "USER") ?: "USER") { prefs.edit().putBoolean("welcome_done", true).apply(); welcomed = true }
+                !state.third -> AppFeaturesOnboarding { prefs.edit().putBoolean("features_done", true).apply(); featuresDone = true }
                 else -> RecoveryMain(prefs, dark, { dark = it; prefs.edit().putBoolean("dark", it).apply() }, theme, { theme = it; prefs.edit().putInt("theme", it).apply() })
             }
         }
