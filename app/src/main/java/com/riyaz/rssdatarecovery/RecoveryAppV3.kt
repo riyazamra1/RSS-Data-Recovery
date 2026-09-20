@@ -9,11 +9,13 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Bundle
 import android.os.Build
 import android.provider.MediaStore
 import androidx.biometric.BiometricManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -71,7 +73,7 @@ import java.util.Date
 private enum class Page { HOME, FEATURES, SCAN, RESULTS, PREMIUM, SETTINGS, HISTORY }
 private enum class Mode { QUICK, DEEP }
 private enum class Category { IMAGE, AUDIO, VIDEO, FILES, DOCUMENTS }
-private data class FoundFile(val name: String, val size: Long, val uri: Uri, val category: Category, val modified: Long)
+private data class FoundFile(val name: String, val size: Long, val uri: Uri, val category: Category, val modified: Long, val isTrashed: Boolean = false)
 private val palettes = listOf(listOf(Color(0xFFB7791F), Color(0xFFF6D365)), listOf(Color(0xFF1677FF), Color(0xFF67D5FF)), listOf(Color(0xFF0E9F6E), Color(0xFF65D6A6)), listOf(Color(0xFF8B5CF6), Color(0xFFE0B7FF)))
 
 @Composable
@@ -664,6 +666,22 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         launchScanAfterPermission()
     }
+
+    fun requestScanPermissions() {
+        when {
+            Build.VERSION.SDK_INT >= 33 -> {
+                val permissions = when (category) {
+                    Category.IMAGE -> arrayOf(Manifest.permission.READ_MEDIA_IMAGES)
+                    Category.VIDEO -> arrayOf(Manifest.permission.READ_MEDIA_VIDEO)
+                    Category.AUDIO -> arrayOf(Manifest.permission.READ_MEDIA_AUDIO)
+                    else -> arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_AUDIO)
+                }
+                permissionLauncher.launch(permissions)
+            }
+            Build.VERSION.SDK_INT >= 29 -> launchScanAfterPermission()
+            else -> permissionLauncher.launch(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE))
+        }
+    }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
         item { Card(Modifier.shadow(3.dp, RoundedCornerShape(18.dp)), elevation = CardDefaults.cardElevation(2.dp)) { Column(Modifier.padding(14.dp)) { Text(if (mode == Mode.QUICK) "QUICK RECOVERY" else "DEEP RECOVERY", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold); category?.let { Text(categoryInfo(it).first.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) } } } }
         item {
@@ -695,14 +713,50 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
 }
 
 private suspend fun queryFiles(context: Context, category: Category?): List<FoundFile> = withContext(Dispatchers.IO) {
-    val result = mutableListOf<FoundFile>(); val uri = MediaStore.Files.getContentUri("external")
-    val projection = arrayOf(MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.DISPLAY_NAME, MediaStore.Files.FileColumns.SIZE, MediaStore.Files.FileColumns.DATE_MODIFIED, MediaStore.Files.FileColumns.MIME_TYPE)
-    context.contentResolver.query(uri, projection, "${MediaStore.Files.FileColumns.SIZE}>0", null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")?.use { cursor ->
-        val idIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID); val nameIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME); val sizeIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE); val dateIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED); val mimeIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
-        while (cursor.moveToNext() && result.size < 500) {
-            val mime = cursor.getString(mimeIndex) ?: ""
-            val kind = when { mime.startsWith("image/") -> Category.IMAGE; mime.startsWith("audio/") -> Category.AUDIO; mime.startsWith("video/") -> Category.VIDEO; mime.contains("pdf") || mime.contains("document") || mime.contains("text") -> Category.DOCUMENTS; else -> Category.FILES }
-            if (category == null || category == kind) result += FoundFile(cursor.getString(nameIndex) ?: continue, cursor.getLong(sizeIndex), Uri.withAppendedPath(uri, cursor.getLong(idIndex).toString()), kind, cursor.getLong(dateIndex))
+    val result = mutableListOf<FoundFile>()
+    val resolver = context.contentResolver
+    val uri = MediaStore.Files.getContentUri("external")
+    val projection = mutableListOf(
+        MediaStore.Files.FileColumns._ID,
+        MediaStore.Files.FileColumns.DISPLAY_NAME,
+        MediaStore.Files.FileColumns.SIZE,
+        MediaStore.Files.FileColumns.DATE_MODIFIED,
+        MediaStore.Files.FileColumns.MIME_TYPE
+    )
+    if (Build.VERSION.SDK_INT >= 30) projection += MediaStore.Files.FileColumns.IS_TRASHED
+
+    val cursor = if (Build.VERSION.SDK_INT >= 30) {
+        val args = Bundle().apply {
+            putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE)
+            putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")
+        }
+        resolver.query(uri, projection.toTypedArray(), args, null)
+    } else {
+        resolver.query(uri, projection.toTypedArray(), "${MediaStore.Files.FileColumns.SIZE}>0", null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")
+    }
+
+    cursor?.use {
+        val idIndex = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+        val nameIndex = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+        val sizeIndex = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
+        val dateIndex = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
+        val mimeIndex = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
+        val trashedIndex = if (Build.VERSION.SDK_INT >= 30) it.getColumnIndex(MediaStore.Files.FileColumns.IS_TRASHED) else -1
+        while (it.moveToNext() && result.size < 1000) {
+            val size = it.getLong(sizeIndex)
+            val trashed = trashedIndex >= 0 && it.getInt(trashedIndex) != 0
+            if (size <= 0L && !trashed) continue
+            val mime = it.getString(mimeIndex).orEmpty()
+            val kind = when {
+                mime.startsWith("image/") -> Category.IMAGE
+                mime.startsWith("audio/") -> Category.AUDIO
+                mime.startsWith("video/") -> Category.VIDEO
+                mime.contains("pdf") || mime.contains("document") || mime.contains("text") || mime.contains("spreadsheet") || mime.contains("presentation") -> Category.DOCUMENTS
+                else -> Category.FILES
+            }
+            if (category == null || category == kind) {
+                result += FoundFile(it.getString(nameIndex) ?: "Unnamed file", size, Uri.withAppendedPath(uri, it.getLong(idIndex).toString()), kind, it.getLong(dateIndex), trashed)
+            }
         }
     }
     result
@@ -717,6 +771,19 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
     var message by remember { mutableStateOf<String?>(null) }
 
     var duplicateOnly by remember { mutableStateOf(false) }
+    var pendingRecovery by remember { mutableStateOf<List<FoundFile>>(emptyList()) }
+    val trashWriteLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+        val pending = pendingRecovery
+        pendingRecovery = emptyList()
+        if (result.resultCode == android.app.Activity.RESULT_OK && pending.isNotEmpty()) {
+            scope.launch(Dispatchers.Main) {
+                message = recoverSelectedFiles(context, pending, premium)
+                selected = emptySet()
+            }
+        } else if (pending.isNotEmpty()) {
+            message = "SYSTEM RECOVERY PERMISSION WAS NOT GRANTED."
+        }
+    }
     val duplicateKeys = files.groupingBy { it.name.trim().lowercase() + "|" + it.size }.eachCount().filterValues { it > 1 }.keys
     val duplicateFiles = files.filter { it.name.trim().lowercase() + "|" + it.size in duplicateKeys }
 
@@ -844,9 +911,21 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
             confirmButton = {
                 TextButton(onClick = {
                     showConfirm = false
-                    scope.launch(Dispatchers.Main) {
-                        message = recoverSelectedFiles(context, chosen, premium)
-                        selected = emptySet()
+                    val trashed = chosen.filter { it.isTrashed && Build.VERSION.SDK_INT >= 30 }
+                    if (trashed.isNotEmpty()) {
+                        runCatching {
+                            pendingRecovery = chosen
+                            val request = MediaStore.createWriteRequest(context.contentResolver, trashed.map { it.uri })
+                            trashWriteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                        }.onFailure {
+                            message = "COULD NOT REQUEST SYSTEM RECOVERY ACCESS."
+                            pendingRecovery = emptyList()
+                        }
+                    } else {
+                        scope.launch(Dispatchers.Main) {
+                            message = recoverSelectedFiles(context, chosen, premium)
+                            selected = emptySet()
+                        }
                     }
                 }) { Text("RECOVER") }
             },
@@ -859,8 +938,16 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
     withContext(Dispatchers.IO) {
         var recovered = 0
         var failed = 0
+        var restoredFromTrash = 0
         files.forEachIndexed { index, file ->
             try {
+                if (file.isTrashed && Build.VERSION.SDK_INT >= 30) {
+                    val values = android.content.ContentValues().apply { put(MediaStore.MediaColumns.IS_TRASHED, 0) }
+                    if (context.contentResolver.update(file.uri, values, null, null) <= 0) throw IllegalStateException("TRASH RESTORE FAILED")
+                    recovered++
+                    restoredFromTrash++
+                    return@forEachIndexed
+                }
                 if (!premium && file.category != Category.IMAGE) {
                     failed++
                     return@forEachIndexed
@@ -937,8 +1024,9 @@ private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile
             }
         }
         when {
-            recovered > 0 && failed == 0 -> "RECOVERED \$recovered FILE(S) TO RSS DATA RECOVERY."
-            recovered > 0 -> "RECOVERED \$recovered FILE(S). \$failed FILE(S) COULD NOT BE RECOVERED."
+            recovered > 0 && failed == 0 && restoredFromTrash == recovered -> "RESTORED $recovered TRASHED FILE(S) TO THEIR ORIGINAL LOCATION."
+            recovered > 0 && failed == 0 -> "RECOVERED $recovered FILE(S). $restoredFromTrash RESTORED FROM TRASH."
+            recovered > 0 -> "RECOVERED $recovered FILE(S). $failed FILE(S) COULD NOT BE RECOVERED."
             else -> "RECOVERY FAILED. PLEASE CHECK STORAGE PERMISSIONS AND TRY AGAIN."
         }
     }
