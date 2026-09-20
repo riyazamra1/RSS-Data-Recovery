@@ -943,9 +943,11 @@ private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, scope: kotli
         Button(
             onClick = {
                 val chosen = files.filter { it.uri in selected }
-                if (!premium) {
+                if (chosen.isEmpty()) return@Button
+                val unsupportedFree = chosen.any { it.category != Category.IMAGE }
+                if (!premium && unsupportedFree) {
                     upgrade()
-                } else if (chosen.isNotEmpty()) {
+                } else {
                     showConfirm = true
                 }
             },
@@ -964,7 +966,11 @@ private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, scope: kotli
             onDismissRequest = { showConfirm = false },
             title = { Text("CONFIRM RECOVERY") },
             text = {
-                Text("RECOVER ${chosen.size} SELECTED FILE(S) TO RSS DATA RECOVERY. PREMIUM PRESERVES THE SOURCE FILE CONTENT AND AVAILABLE SOURCE DETAILS.")
+                Text(if (premium) {
+                    "RECOVER ${chosen.size} SELECTED FILE(S). PREMIUM COPIES THE SOURCE CONTENT, ORIGINAL FILE NAME, AND AVAILABLE SOURCE METADATA WITHOUT RE-ENCODING THE FILE."
+                } else {
+                    "FREE IMAGE RECOVERY creates a new JPEG in Pictures/RSS Data Recovery using the current date in the filename. The image is re-encoded to reduce quality and normally drops source EXIF metadata; the original source file is not overwritten."
+                })
             },
             confirmButton = {
                 TextButton(onClick = {
