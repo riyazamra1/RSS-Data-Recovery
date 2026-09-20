@@ -324,12 +324,12 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                             }
                             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal=4.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
                                 BlurMenuItem("Home",Icons.Default.Home,Color(0xFF4F7CFF),page==Page.HOME){navigate(Page.HOME)}
-                                GlassMenuItem("App Features",Icons.Default.AutoAwesome,Color(0xFFFFB21A),page==Page.FEATURES){navigate(Page.FEATURES)}
-                                GlassMenuItem("Recovery",Icons.Default.Restore,Color(0xFFFF8A3D),page==Page.SCAN){mode=Mode.QUICK;category=null;navigate(Page.SCAN)}
-                                GlassMenuItem("Results",Icons.Default.Folder,Color(0xFF18B7A0),page==Page.RESULTS){navigate(Page.RESULTS)}
-                                GlassMenuItem("Premium",Icons.Default.Star,Color(0xFFFFB21A),page==Page.PREMIUM){navigate(Page.PREMIUM)}
-                                GlassMenuItem("Recovery History",Icons.Default.History,Color(0xFF9B5CFF),page==Page.HISTORY){navigate(Page.HISTORY)}
-                                GlassMenuItem("Settings",Icons.Default.Settings,Color(0xFF4F7CFF),page==Page.SETTINGS){navigate(Page.SETTINGS)}
+                                BlurMenuItem("App Features",Icons.Default.AutoAwesome,Color(0xFFFFB21A),page==Page.FEATURES){navigate(Page.FEATURES)}
+                                BlurMenuItem("Recovery",Icons.Default.Restore,Color(0xFFFF8A3D),page==Page.SCAN){mode=Mode.QUICK;category=null;navigate(Page.SCAN)}
+                                BlurMenuItem("Results",Icons.Default.Folder,Color(0xFF18B7A0),page==Page.RESULTS){navigate(Page.RESULTS)}
+                                BlurMenuItem("Premium",Icons.Default.Star,Color(0xFFFFB21A),page==Page.PREMIUM){navigate(Page.PREMIUM)}
+                                BlurMenuItem("Recovery History",Icons.Default.History,Color(0xFF9B5CFF),page==Page.HISTORY){navigate(Page.HISTORY)}
+                                BlurMenuItem("Settings",Icons.Default.Settings,Color(0xFF4F7CFF),page==Page.SETTINGS){navigate(Page.SETTINGS)}
                             }
                             Column(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
                                 androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),"Razeen Secure Solution",Modifier.size(76.dp).clickable{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.rsscctvsolution.eu.cc")))})
