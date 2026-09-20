@@ -196,7 +196,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
         SoftBlurGlow(Modifier.align(Alignment.Center).size(330.dp), Color(0xFF2EA7FF))
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             AnimatedVisibility(visible, enter = fadeIn(tween(450)) + scaleIn(initialScale = .94f, animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(500))) {
-                Card(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 18.dp).shadow(3.dp, RoundedCornerShape(30.dp)), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .96f)), elevation = CardDefaults.cardElevation(3.dp)) {
+                Card(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 18.dp).shadow(3.dp, RoundedCornerShape(30.dp)), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp)) {
                     Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(104.dp))
                         Text("RSS DATA RECOVERY", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
@@ -309,7 +309,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = if (dark) .88f else .97f))
+                        .background(MaterialTheme.colorScheme.surface)
                         .graphicsLayer { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) renderEffect = BlurEffect(20f, 20f, TileMode.Clamp) }
                         .padding(14.dp)
                 ) {
@@ -325,8 +325,11 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal=4.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
                                 BlurMenuItem("Home",Icons.Default.Home,Color(0xFF4F7CFF),page==Page.HOME){navigate(Page.HOME)}
                                 BlurMenuItem("App Features",Icons.Default.AutoAwesome,Color(0xFFFFB21A),page==Page.FEATURES){navigate(Page.FEATURES)}
-                                BlurMenuItem("Recovery",Icons.Default.Restore,Color(0xFFFF8A3D),page==Page.SCAN){mode=Mode.QUICK;category=null;navigate(Page.SCAN)}
+                                BlurMenuItem("Quick Recovery",Icons.Default.FlashOn,Color(0xFFFF8A3D),page==Page.SCAN && mode==Mode.QUICK){mode=Mode.QUICK;category=null;navigate(Page.SCAN)}
+                                BlurMenuItem("Deep Recovery",Icons.Default.Search,Color(0xFF8E44AD),page==Page.SCAN && mode==Mode.DEEP){mode=Mode.DEEP;category=null;navigate(Page.SCAN)}
+                                BlurMenuItem("Recovery by Category",Icons.Default.Category,Color(0xFF18B7A0),page==Page.SCAN && category!=null){mode=Mode.QUICK;category=null;navigate(Page.SCAN)}
                                 BlurMenuItem("Results",Icons.Default.Folder,Color(0xFF18B7A0),page==Page.RESULTS){navigate(Page.RESULTS)}
+                                BlurMenuItem("Duplicate Check",Icons.Default.ContentCopy,Color(0xFFE67E22),page==Page.RESULTS){navigate(Page.RESULTS)}
                                 BlurMenuItem("Premium",Icons.Default.Star,Color(0xFFFFB21A),page==Page.PREMIUM){navigate(Page.PREMIUM)}
                                 BlurMenuItem("Recovery History",Icons.Default.History,Color(0xFF9B5CFF),page==Page.HISTORY){navigate(Page.HISTORY)}
                                 BlurMenuItem("Settings",Icons.Default.Settings,Color(0xFF4F7CFF),page==Page.SETTINGS){navigate(Page.SETTINGS)}
@@ -380,9 +383,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
             },
             bottomBar = {
                 Box(Modifier.padding(horizontal=12.dp,vertical=8.dp).clip(RoundedCornerShape(24.dp)).shadow(3.dp,RoundedCornerShape(24.dp))){
-                    Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.surface.copy(alpha=if(dark).78f else .90f),RoundedCornerShape(24.dp)).graphicsLayer{
-                        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.S) renderEffect=BlurEffect(18f,18f,TileMode.Clamp)
-                    })
+                    Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.surface,RoundedCornerShape(24.dp)))
                     NavigationBar(modifier=Modifier.fillMaxWidth(),containerColor=Color.Transparent,tonalElevation=0.dp){
                         NavigationBarItem(selected=page==Page.HOME,onClick={navigate(Page.HOME)},icon={Icon(Icons.Default.Home,null,tint=Color(0xFF4F7CFF))},label={Text("Home")})
                         NavigationBarItem(selected=page==Page.SCAN,onClick={mode=Mode.QUICK;category=null;navigate(Page.SCAN)},icon={Icon(Icons.Default.Restore,null,tint=Color(0xFFFF8A3D))},label={Text("Recover")})
