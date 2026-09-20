@@ -610,10 +610,13 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
     var showConfirm by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    val duplicateKeys = files.groupingBy { it.name.lowercase() + "|" + it.size }.eachCount().filterValues { it > 1 }.keys
-    val duplicateCount = files.count { it.name.lowercase() + "|" + it.size in duplicateKeys }
+    var duplicateOnly by remember { mutableStateOf(false) }
+    val duplicateKeys = files.groupingBy { it.name.trim().lowercase() + "|" + it.size }.eachCount().filterValues { it > 1 }.keys
+    val duplicateFiles = files.filter { it.name.trim().lowercase() + "|" + it.size in duplicateKeys }
 
     val visible = files.filter { it.name.contains(search, true) }.let {
+        val filtered = if (duplicateOnly) it.filter { file -> file.name.trim().lowercase() + "|" + file.size in duplicateKeys } else it
+        filtered
         when (sort) {
             1 -> it.sortedByDescending(FoundFile::size)
             2 -> it.sortedByDescending(FoundFile::modified)
@@ -623,13 +626,42 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
-            Text("${visible.size} FILES FOUND", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-            OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), label = { Text("SEARCH FILES") }, singleLine = true)
+            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(20.dp)), shape = RoundedCornerShape(20.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Folder, null, tint = Color(0xFF18B7A0), modifier = Modifier.size(32.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("RECOVERY RESULTS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                            Text("${files.size} scanned • ${duplicateFiles.size} duplicate candidates", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(selected = !duplicateOnly, onClick = { duplicateOnly = false }, label = { Text("ALL") })
+                        FilterChip(selected = duplicateOnly, onClick = { duplicateOnly = true }, label = { Text("DUPLICATES ${duplicateFiles.size}") })
+                    }
+                }
+            }
+            OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), label = { Text("SEARCH RECOVERY RESULTS") }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true)
         }
         if (!premium && visible.isNotEmpty()) {
             item {
                 Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(18.dp)),shape=RoundedCornerShape(18.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer)){
                     Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Star,null,tint=Color(0xFFFFB21A),modifier=Modifier.size(28.dp));Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)){Text("UNLOCK MORE RECOVERY",fontWeight=FontWeight.ExtraBold);Text("Deep recovery, audio, video, files, original metadata and quality.",style=MaterialTheme.typography.bodySmall)};TextButton(onClick=upgrade){Text("UPGRADE")}}
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(18.dp)), shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF00A6A6).copy(alpha = .08f))) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.ContentCopy, null, tint = Color(0xFF00A6A6), modifier = Modifier.size(28.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("DUPLICATE CHECK", fontWeight = FontWeight.ExtraBold)
+                        Text(if (duplicateFiles.isEmpty()) "No duplicate candidates in these results." else "${duplicateFiles.size} files share the same name and size.", style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (duplicateFiles.isNotEmpty()) TextButton(onClick = { duplicateOnly = true }) { Text("SHOW") }
                 }
             }
         }
@@ -642,6 +674,17 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(onClick = { selected = visible.map(FoundFile::uri).toSet() }) { Text("SELECT ALL") }
                 TextButton(onClick = { selected = emptySet() }) { Text("CLEAR") }
+            }
+        }
+        if (visible.isEmpty()) {
+            item {
+                Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(18.dp))) {
+                    Column(Modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(if (files.isEmpty()) Icons.Default.SearchOff else Icons.Default.FilterAltOff, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
+                        Text(if (files.isEmpty()) "NO SCAN RESULTS YET" else "NO MATCHING RESULTS", fontWeight = FontWeight.ExtraBold)
+                        Text(if (files.isEmpty()) "Run Quick Recovery or Deep Recovery to populate this page." else "Change the search or duplicate filter.", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
         }
         items(visible) { file ->
