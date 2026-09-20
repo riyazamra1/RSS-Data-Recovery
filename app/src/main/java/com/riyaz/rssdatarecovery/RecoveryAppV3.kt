@@ -605,7 +605,7 @@ private fun pageTitle(page: Page, mode: Mode): String = when (page) {
         item{LazyVerticalGrid(GridCells.Fixed(2),Modifier.fillMaxWidth().height(250.dp),verticalArrangement=Arrangement.spacedBy(9.dp),horizontalArrangement=Arrangement.spacedBy(9.dp),userScrollEnabled=false){items(Category.values().toList()){cat->val info=categoryInfo(cat);ActionCard(info.first,info.second,info.third,{onCategory(cat)},Modifier.fillMaxWidth())}}}
         item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(18.dp)),shape=RoundedCornerShape(18.dp),elevation=CardDefaults.cardElevation(1.dp)){Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Storage,null,tint=Color(0xFF4F7CFF));Spacer(Modifier.width(9.dp));Text("DEVICE STORAGE",fontWeight=FontWeight.Bold)};Text("${storage.first} USED  •  ${storage.second} FREE",style=MaterialTheme.typography.bodySmall);LinearProgressIndicator(progress={storage.third},modifier=Modifier.fillMaxWidth())}}}
         item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){ActionCard("Quick Recovery",Icons.Default.FlashOn,Color(0xFFE67E22),quick,Modifier.weight(1f));ActionCard("Deep Recovery",Icons.Default.Search,Color(0xFF8E44AD),deep,Modifier.weight(1f))}}
-        item{Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)){Text("RECOVERY TOOLS",fontWeight=FontWeight.ExtraBold);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Safe preview",Icons.Default.Visibility,Color(0xFF4F7CFF),{onResults()},Modifier.weight(1f));ToolPill("Offline scan",Icons.Default.CloudOff,Color(0xFF18B7A0),{quick()},Modifier.weight(1f))};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Duplicate check",Icons.Default.ContentCopy,Color(0xFFE67E22),onDuplicateCheck,Modifier.weight(1f));ToolPill("Recovery history",Icons.Default.History,Color(0xFF8E44AD),{history()},Modifier.weight(1f))}}}
+        item{Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)){Text("RECOVERY TOOLS",fontWeight=FontWeight.ExtraBold);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Safe preview",Icons.Default.Visibility,Color(0xFF4F7CFF),{onResults()},Modifier.weight(1f));ToolPill("Offline scan",Icons.Default.CloudOff,Color(0xFF18B7A0),{quick()},Modifier.weight(1f))};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Recovery history",Icons.Default.History,Color(0xFF8E44AD),{history()},Modifier.weight(1f))}}}
         item{OutlinedButton(onClick=history,Modifier.fillMaxWidth()){Icon(Icons.Default.History,null);Spacer(Modifier.width(6.dp));Text("RECOVERY HISTORY")}}
     }
 }
@@ -1096,7 +1096,6 @@ private fun PremiumScreen(active: Boolean, onUpgrade: () -> Unit) {
         Triple("Original metadata", false, true),
         Triple("Original quality", false, true),
         Triple("Large batch recovery", false, true),
-        Triple("Advanced duplicate detection", false, true),
         Triple("Priority recovery", false, true),
         Triple("Recovery destination control", true, true),
         Triple("Recovery history", true, true),
