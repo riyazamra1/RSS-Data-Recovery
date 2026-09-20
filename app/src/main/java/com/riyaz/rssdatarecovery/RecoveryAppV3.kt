@@ -121,7 +121,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
 @Composable
 private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF2EA7FF)) {
     Box(modifier.background(tint.copy(alpha = 0.18f), androidx.compose.foundation.shape.CircleShape).graphicsLayer {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) renderEffect = BlurEffect(42f, 42f, TileMode.Clamp)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) renderEffect = BlurEffect(20f, 20f, TileMode.Clamp)
     })
 }
 
@@ -447,8 +447,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                         onQuick = { mode = Mode.QUICK; category = null; navigate(Page.SCAN) },
                         onDeep = { mode = Mode.DEEP; category = null; navigate(Page.SCAN) },
                         onResults = { navigate(Page.RESULTS) },
-                        onPremium = { navigate(Page.PREMIUM) }
-                    )
+                        onPremium = { navigate(Page.PREMIUM) }                    )
 
                     Page.RESULTS -> ResultsScreen(
                         files,
@@ -897,8 +896,7 @@ private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, scope: kotli
                                     selected = if (file.uri in selected) selected - file.uri else selected + file.uri
                                 }.padding(10.dp),
                                 verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(checked = file.uri in selected, onCheckedChange = null)
+                            ) {                                Checkbox(checked = file.uri in selected, onCheckedChange = null)
                                 val info = categoryInfo(file.category)
                                 Icon(info.second, null, Modifier.size(27.dp), tint = info.third)
                                 Spacer(Modifier.width(8.dp))
@@ -1225,33 +1223,154 @@ private fun PremiumScreen(active: Boolean, onUpgrade: () -> Unit) {
     }
 }
 
-@Composable private fun SettingsScreen(prefs:SharedPreferences,dark:Boolean,onDarkChange:(Boolean)->Unit,theme:Int,onThemeChange:(Int)->Unit){
-    val context=LocalContext.current;var lock by remember{mutableStateOf(prefs.getBoolean("app_lock",false))};var biometric by remember{mutableStateOf(prefs.getBoolean("biometric_enabled",false))};var showPinDialog by remember{mutableStateOf(false)};var pin by remember{mutableStateOf("")};var confirmPin by remember{mutableStateOf("")};var haptics by remember{mutableStateOf(prefs.getBoolean("haptics",true))};var notifications by remember{mutableStateOf(prefs.getBoolean("notifications",true))};var autoScan by remember{mutableStateOf(prefs.getBoolean("auto_scan",false))};var confirmRecovery by remember{mutableStateOf(prefs.getBoolean("confirm_recovery",true))};var previews by remember{mutableStateOf(prefs.getBoolean("previews",true))};var saveHistory by remember{mutableStateOf(prefs.getBoolean("save_history",true))}
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(22.dp)),shape=RoundedCornerShape(22.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)){Column(Modifier.fillMaxWidth().padding(vertical=18.dp),horizontalAlignment=Alignment.CenterHorizontally){androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(64.dp));Spacer(Modifier.height(8.dp));Text("RSS DATA RECOVERY",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.ExtraBold);Text("SETTINGS",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}}};item{SettingSwitch("DARK APPEARANCE",dark,onDarkChange)};item{Card(Modifier.fillMaxWidth().shadow(1.dp,RoundedCornerShape(16.dp)),shape=RoundedCornerShape(16.dp)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Lock,null,tint=Color(0xFFE74C3C));Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)){Text("APP LOCK",fontWeight=FontWeight.Bold);Text(if(lock)"Enabled — use setup to change security."else"Create a verified PIN and optional biometric unlock.",style=MaterialTheme.typography.bodySmall)};Switch(checked=lock,onCheckedChange={v->lock=v;prefs.edit().putBoolean("app_lock",v).apply();if(v){pin="";confirmPin="";showPinDialog=true}})}};if(lock)item{TextButton(onClick={pin="";confirmPin="";showPinDialog=true},Modifier.fillMaxWidth()){Icon(Icons.Default.Security,null);Spacer(Modifier.width(6.dp));Text("SET / CHANGE PIN & BIOMETRIC")}};item{SettingSwitch("HAPTIC FEEDBACK",haptics){haptics=it;prefs.edit().putBoolean("haptics",it).apply()}};item{SettingSwitch("SCAN NOTIFICATIONS",notifications){notifications=it;prefs.edit().putBoolean("notifications",it).apply()}};item{SettingSwitch("AUTO SCAN ON LAUNCH",autoScan){autoScan=it;prefs.edit().putBoolean("auto_scan",it).apply()}};item{SettingSwitch("CONFIRM BEFORE RECOVERY",confirmRecovery){confirmRecovery=it;prefs.edit().putBoolean("confirm_recovery",it).apply()}};item{SettingSwitch("SHOW FILE PREVIEWS",previews){previews=it;prefs.edit().putBoolean("previews",it).apply()}};item{SettingSwitch("SAVE RECOVERY HISTORY",saveHistory){saveHistory=it;prefs.edit().putBoolean("save_history",it).apply()}};item{Card(Modifier.fillMaxWidth().shadow(1.dp,RoundedCornerShape(16.dp))){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.DeleteSweep,null,tint=Color(0xFFE74C3C));Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)){Text("CLEAR RECOVERY HISTORY",fontWeight=FontWeight.Bold);Text("Remove saved scan and recovery activity.",style=MaterialTheme.typography.bodySmall)};TextButton(onClick={prefs.edit().remove("recovery_history").remove("last_scan").remove("last_count").apply()}){Text("CLEAR")}}}};item{Text("COLOR THEME",fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp))};item{Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){palettes.forEachIndexed{idx,colors->Button(onClick={onThemeChange(idx)},colors=ButtonDefaults.buttonColors(containerColor=colors[0])){Text(if(idx==theme)"✓"else"${idx+1}")}}}};item{Card(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(16.dp))){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){Text("PRIVACY & SAFETY",fontWeight=FontWeight.Bold);Text("SCANNING STAYS ON THE DEVICE AND USES ANDROID STORAGE PERMISSIONS.",style=MaterialTheme.typography.bodySmall)}}};item{
-    val allFiles = Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager()
-    Card(Modifier.fillMaxWidth().shadow(1.dp,RoundedCornerShape(16.dp))){
-        Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
-            Row(verticalAlignment=Alignment.CenterVertically){
-                Icon(Icons.Default.FolderOpen,null,tint=Color(0xFF4F7CFF))
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)){
-                    Text("ALL FILES ACCESS",fontWeight=FontWeight.Bold)
-                    Text(if(allFiles) "ENABLED — Deep and document scans can access shared storage." else "Enable for Deep Recovery and document/file scanning.",style=MaterialTheme.typography.bodySmall)
+@Composable
+private fun SettingsScreen(
+    prefs: SharedPreferences,
+    dark: Boolean,
+    onDarkChange: (Boolean) -> Unit,
+    theme: Int,
+    onThemeChange: (Int) -> Unit
+) {
+    val context = LocalContext.current
+    var lock by remember { mutableStateOf(prefs.getBoolean("app_lock", false)) }
+    var biometric by remember { mutableStateOf(prefs.getBoolean("biometric_enabled", false)) }
+    var showPinDialog by remember { mutableStateOf(false) }
+    var pin by remember { mutableStateOf("") }
+    var confirmPin by remember { mutableStateOf("") }
+    var haptics by remember { mutableStateOf(prefs.getBoolean("haptics", true)) }
+    var notifications by remember { mutableStateOf(prefs.getBoolean("notifications", true)) }
+    var autoScan by remember { mutableStateOf(prefs.getBoolean("auto_scan", false)) }
+    var confirmRecovery by remember { mutableStateOf(prefs.getBoolean("confirm_recovery", true)) }
+    var previews by remember { mutableStateOf(prefs.getBoolean("previews", true)) }
+    var saveHistory by remember { mutableStateOf(prefs.getBoolean("save_history", true)) }
+
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item {
+            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(22.dp)), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(64.dp))
+                    Spacer(Modifier.height(8.dp))
+                    Text("RSS DATA RECOVERY", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                    Text("SETTINGS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            if(Build.VERSION.SDK_INT >= 30 && !allFiles){
-                Button(onClick={
-                    runCatching{
-                        context.startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,Uri.parse("package:${context.packageName}")))
+        }
+        item { SettingSwitch("DARK APPEARANCE", dark, onDarkChange) }
+        item {
+            Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp)) {
+                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Lock, null, tint = Color(0xFFE74C3C))
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("APP LOCK", fontWeight = FontWeight.Bold)
+                        Text(if (lock) "Enabled — security settings are available below." else "Create a verified PIN and optional biometric unlock.", style = MaterialTheme.typography.bodySmall)
                     }
-                },Modifier.fillMaxWidth()){ Text("OPEN STORAGE ACCESS SETTINGS") }
+                    Switch(checked = lock, onCheckedChange = { enabled ->
+                        if (enabled) {
+                            pin = ""; confirmPin = ""; showPinDialog = true
+                        } else {
+                            lock = false
+                            biometric = false
+                            prefs.edit().putBoolean("app_lock", false).putBoolean("pin_enabled", false).putBoolean("biometric_enabled", false).apply()
+                        }
+                    })
+                }
+            }
+        }
+        if (lock) item {
+            OutlinedButton(onClick = { pin = ""; confirmPin = ""; showPinDialog = true }, Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Security, null); Spacer(Modifier.width(6.dp)); Text("SET / CHANGE PIN & BIOMETRIC")
+            }
+        }
+        item { SettingSwitch("HAPTIC FEEDBACK", haptics) { haptics = it; prefs.edit().putBoolean("haptics", it).apply() } }
+        item { SettingSwitch("SCAN NOTIFICATIONS", notifications) { notifications = it; prefs.edit().putBoolean("notifications", it).apply() } }
+        item { SettingSwitch("AUTO SCAN ON LAUNCH", autoScan) { autoScan = it; prefs.edit().putBoolean("auto_scan", it).apply() } }
+        item { SettingSwitch("CONFIRM BEFORE RECOVERY", confirmRecovery) { confirmRecovery = it; prefs.edit().putBoolean("confirm_recovery", it).apply() } }
+        item { SettingSwitch("SHOW FILE PREVIEWS", previews) { previews = it; prefs.edit().putBoolean("previews", it).apply() } }
+        item { SettingSwitch("SAVE RECOVERY HISTORY", saveHistory) { saveHistory = it; prefs.edit().putBoolean("save_history", it).apply() } }
+        item {
+            Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp)) {
+                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DeleteSweep, null, tint = Color(0xFFE74C3C)); Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) { Text("CLEAR RECOVERY HISTORY", fontWeight = FontWeight.Bold); Text("Remove saved scan and recovery activity.", style = MaterialTheme.typography.bodySmall) }
+                    TextButton(onClick = { prefs.edit().remove("recovery_history").remove("last_scan").remove("last_count").apply() }) { Text("CLEAR") }
+                }
+            }
+        }
+        item { Text("COLOR THEME", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                palettes.forEachIndexed { idx, colors ->
+                    Button(onClick = { onThemeChange(idx) }, colors = ButtonDefaults.buttonColors(containerColor = colors[0]), modifier = Modifier.weight(1f)) {
+                        Text(if (idx == theme) "✓" else idx.toString())
+                    }
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("PRIVACY & SAFETY", fontWeight = FontWeight.Bold)
+                    Text("SCANNING STAYS ON THE DEVICE AND USES ANDROID STORAGE PERMISSIONS.", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        item {
+            val allFiles = Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager()
+            Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp)) {
+                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.FolderOpen, null, tint = Color(0xFF4F7CFF)); Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("ALL FILES ACCESS", fontWeight = FontWeight.Bold)
+                            Text(if (allFiles) "ENABLED — Deep and document scans can access shared storage." else "Enable for Deep Recovery and document/file scanning.", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    if (Build.VERSION.SDK_INT >= 30 && !allFiles) Button(onClick = {
+                        runCatching { context.startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${context.packageName}"))) }
+                    }, Modifier.fillMaxWidth()) { Text("OPEN STORAGE ACCESS SETTINGS") }
+                }
+            }
+        }
+        item {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo), "Razeen Secure Solution", Modifier.size(82.dp).clickable {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc")))
+                })
+                Spacer(Modifier.height(4.dp)); Text("RAZEEN SECURE SOLUTION", fontWeight = FontWeight.ExtraBold)
+                Text("Mobile & PC Software • CCTV Camera Installation • Networking • System Administration", style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text("077 115 5504  •  070 155 5504", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Text("rsscctvsolution@gmail.com", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Text("www.rsscctvsolution.eu.cc", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
-};item{Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally){androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),"Razeen Secure Solution",Modifier.size(96.dp).clickable{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.rsscctvsolution.eu.cc")))});Spacer(Modifier.height(2.dp));Text("RAZEEN SECURE SOLUTION",fontWeight=FontWeight.ExtraBold);Text("Mobile & PC Software • CCTV Camera Installation • Networking • System Administration",style=MaterialTheme.typography.bodySmall,textAlign=androidx.compose.ui.text.style.TextAlign.Center);Text("077 115 5504  •  070 155 5504",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary);Text("rsscctvsolution@gmail.com",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary);Text("www.rsscctvsolution.eu.cc",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary)}}}
-    if(showPinDialog){val available=BiometricManager.from(context).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK)==BiometricManager.BIOMETRIC_SUCCESS;AlertDialog(onDismissRequest={showPinDialog=false},title={Text("APP LOCK SECURITY")},text={Column(verticalArrangement=Arrangement.spacedBy(9.dp)){Text("Create and verify a 6-digit PIN. Biometric unlock is optional.");OutlinedTextField(pin,{v->if(v.length<=6&&v.all(Char::isDigit))pin=v},Modifier.fillMaxWidth(),label={Text("6-DIGIT PIN")},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword));OutlinedTextField(confirmPin,{v->if(v.length<=6&&v.all(Char::isDigit))confirmPin=v},Modifier.fillMaxWidth(),label={Text("VERIFY PIN")},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword));if(available)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Fingerprint,null,tint=Color(0xFF4F7CFF));Spacer(Modifier.width(8.dp));Text("BIOMETRIC UNLOCK",Modifier.weight(1f),fontWeight=FontWeight.Bold);Switch(checked=biometric,onCheckedChange={biometric=it})}}},confirmButton={Button(enabled=pin.length==6&&pin==confirmPin,onClick={prefs.edit().putString("pin_hash",hashPin(pin)).putBoolean("pin_enabled",true).putBoolean("app_lock",true).putBoolean("biometric_enabled",biometric&&available).apply();lock=true;showPinDialog=false;pin="";confirmPin=""}){Text("VERIFY & SAVE")}},dismissButton={TextButton(onClick={showPinDialog=false}){Text("CANCEL")}})}
+    if (showPinDialog) {
+        val available = BiometricManager.from(context).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS
+        AlertDialog(
+            onDismissRequest = { showPinDialog = false },
+            title = { Text("APP LOCK SECURITY") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text("Create and verify a 6-digit PIN. Biometric unlock is optional.")
+                    OutlinedTextField(pin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) pin = v }, Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                    OutlinedTextField(confirmPin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) confirmPin = v }, Modifier.fillMaxWidth(), label = { Text("VERIFY PIN") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                    if (available) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Fingerprint, null, tint = Color(0xFF4F7CFF)); Spacer(Modifier.width(8.dp)); Text("BIOMETRIC UNLOCK", Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                        Switch(checked = biometric, onCheckedChange = { biometric = it })
+                    }
+                }
+            },
+            confirmButton = {
+                Button(enabled = pin.length == 6 && pin == confirmPin, onClick = {
+                    prefs.edit().putString("pin_hash", hashPin(pin)).putBoolean("pin_enabled", true).putBoolean("app_lock", true).putBoolean("biometric_enabled", biometric && available).apply()
+                    lock = true; showPinDialog = false; pin = ""; confirmPin = ""
+                }) { Text("VERIFY & SAVE") }
+            },
+            dismissButton = { TextButton(onClick = { showPinDialog = false }) { Text("CANCEL") } }
+        )
+    }
 }
-
 
 @Composable
 private fun AppFeaturesOnboarding(systemDark: Boolean, done: () -> Unit, skip: () -> Unit) {
@@ -1260,39 +1379,30 @@ private fun AppFeaturesOnboarding(systemDark: Boolean, done: () -> Unit, skip: (
         Triple("RECOVERY RESULTS", "Review scan counts, categories, and matching files from a dedicated results workspace.", Icons.Default.Assessment),
         Triple("PRIVACY & CONTROL", "App lock, biometric unlock, appearance controls, scan preferences, and recovery history stay under your control.", Icons.Default.Security)
     )
-    val darkBackgrounds = listOf(
+    var index by remember { mutableIntStateOf(0) }
+    val transition = rememberInfiniteTransition(label = "featureMotion")
+    val drift1 by transition.animateFloat(-70f, 70f, infiniteRepeatable(tween(4200), RepeatMode.Reverse), label = "drift1")
+    val drift2 by transition.animateFloat(60f, -60f, infiniteRepeatable(tween(5200), RepeatMode.Reverse), label = "drift2")
+    val drift3 by transition.animateFloat(-45f, 45f, infiniteRepeatable(tween(3600), RepeatMode.Reverse), label = "drift3")
+    val scale by transition.animateFloat(0.96f, 1.04f, infiniteRepeatable(tween(1800), RepeatMode.Reverse), label = "featureScale")
+    val backgrounds = if (systemDark) listOf(
         listOf(Color(0xFF07111F), Color(0xFF123B5D), Color(0xFF0A1020)),
         listOf(Color(0xFF0A1715), Color(0xFF12483C), Color(0xFF081311)),
-        listOf(Color(0xFF17100A), Color(0xFF55351B), Color(0xFF110C09)),
-        listOf(Color(0xFF130C1D), Color(0xFF382052), Color(0xFF0C0912))
-    )
-    val lightBackgrounds = listOf(
+        listOf(Color(0xFF17100A), Color(0xFF55351B), Color(0xFF110C09))
+    ) else listOf(
         listOf(Color.White, Color(0xFFEAF5FF), Color.White),
         listOf(Color.White, Color(0xFFEAFBF6), Color.White),
-        listOf(Color.White, Color(0xFFFFF5E8), Color.White),
-        listOf(Color.White, Color(0xFFF4EDFF), Color.White)
+        listOf(Color.White, Color(0xFFFFF5E8), Color.White)
     )
-    var index by remember { mutableIntStateOf(0) }
-    val pulse = rememberInfiniteTransition(label = "featurePulse")
-    val scale by pulse.animateFloat(0.98f, 1.02f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "featureScale")
     Box(Modifier.fillMaxSize()) {
-        androidx.compose.animation.Crossfade(
-            targetState = index,
-            animationSpec = tween(450),
-            label = "featureBackground"
-        ) { pageIndex ->
-            Box(Modifier.fillMaxSize().background(Brush.linearGradient(if (systemDark) darkBackgrounds[pageIndex] else lightBackgrounds[pageIndex]))) {
-                Icon(
-                    imageVector = features[pageIndex].third,
-                    contentDescription = null,
-                    modifier = Modifier.align(Alignment.Center).size(340.dp).graphicsLayer {
-                        alpha = if (systemDark) 0.055f else 0.045f
-                    },
-                    tint = palettes[pageIndex % palettes.size][0]
-                )
+        androidx.compose.animation.Crossfade(targetState = index, animationSpec = tween(450), label = "featureBackground") { pageIndex ->
+            Box(Modifier.fillMaxSize().background(Brush.linearGradient(backgrounds[pageIndex]))) {
+                Icon(features[pageIndex].third, null, Modifier.align(Alignment.Center).size(330.dp).graphicsLayer { alpha = if (systemDark) .045f else .035f }, tint = palettes[pageIndex % palettes.size][0])
             }
         }
-        SoftBlurGlow(Modifier.align(Alignment.Center).size(360.dp), palettes[index % palettes.size][1])
+        Icon(Icons.Default.Cloud, null, Modifier.offset(x = drift1.dp, y = (-150).dp).size(76.dp).graphicsLayer { alpha = .08f }, tint = palettes[1][0])
+        Icon(Icons.Default.Folder, null, Modifier.align(Alignment.CenterStart).offset(x = drift2.dp, y = 30.dp).size(64.dp).graphicsLayer { alpha = .08f }, tint = palettes[2][0])
+        Icon(Icons.Default.Security, null, Modifier.align(Alignment.BottomEnd).offset(x = drift3.dp, y = (-130).dp).size(70.dp).graphicsLayer { alpha = .08f }, tint = palettes[3][0])
         Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 30.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text("RSS DATA RECOVERY", fontWeight = FontWeight.ExtraBold, fontSize = 24.sp)
             Text("APP FEATURES", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
