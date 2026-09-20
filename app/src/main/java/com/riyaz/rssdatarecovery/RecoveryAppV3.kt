@@ -384,7 +384,24 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                         { mode = Mode.QUICK; category = null; navigate(Page.SCAN) },
                         { mode = Mode.DEEP; category = null; navigate(Page.SCAN) },
                         { navigate(Page.HISTORY) },
-                        { navigate(Page.RESULTS) }
+                        { navigate(Page.RESULTS) },
+                        {
+                            scanning = true
+                            progress = 0f
+                            scope.launch {
+                                try {
+                                    val result = queryFiles(context, null)
+                                    val duplicateKeys = result.groupingBy { it.name.trim().lowercase() + "|" + it.size }.eachCount().filterValues { it > 1 }.keys
+                                    files = result.filter { it.name.trim().lowercase() + "|" + it.size in duplicateKeys }
+                                    count = files.size
+                                    prefs.edit().putString("last_scan", DateFormat.getDateTimeInstance().format(Date())).putInt("last_count", files.size).apply()
+                                    progress = 1f
+                                    navigate(Page.RESULTS)
+                                } finally {
+                                    scanning = false
+                                }
+                            }
+                        }
                     ) { category = it; mode = Mode.QUICK; navigate(Page.SCAN) }
 
                     Page.SCAN -> ScanScreen(
@@ -512,7 +529,7 @@ private fun pageTitle(page: Page, mode: Mode): String = when (page) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Text("APP FEATURES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("Everything available in RSS Data Recovery.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};items(features){item->Card(Modifier.fillMaxWidth().clickable{when(item.first){"Quick Recovery","Category Recovery"->onQuick();"Deep Recovery"->onDeep();"Results & Preview","Duplicate Detection"->onResults();"Premium Recovery"->onPremium()}}.shadow(2.dp,RoundedCornerShape(17.dp)),shape=RoundedCornerShape(17.dp),elevation=CardDefaults.cardElevation(1.dp)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(44.dp).background(item.third.copy(alpha=.12f),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){Icon(item.second,null,tint=item.third,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Text(item.first,Modifier.weight(1f),fontWeight=FontWeight.Bold);Icon(Icons.Default.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)}}}}
 }
 
-@Composable private fun HomeScreen(quick:()->Unit,deep:()->Unit,history:()->Unit,onResults:()->Unit,onCategory:(Category)->Unit){
+@Composable private fun HomeScreen(quick:()->Unit,deep:()->Unit,history:()->Unit,onResults:()->Unit,onDuplicateCheck:()->Unit,onCategory:(Category)->Unit){
     val context=LocalContext.current;var storage by remember{mutableStateOf(storageUsage(context))};LaunchedEffect(Unit){while(true){storage=storageUsage(context);delay(1500)}}
     LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(11.dp)){
         item{Text("RECOVER YOUR FILES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("SCAN, PREVIEW AND RECOVER SAFELY",style=MaterialTheme.typography.bodySmall)}
@@ -520,7 +537,7 @@ private fun pageTitle(page: Page, mode: Mode): String = when (page) {
         item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){ActionCard("Quick Recovery",Icons.Default.FlashOn,Color(0xFFE67E22),quick,Modifier.weight(1f));ActionCard("Deep Recovery",Icons.Default.Search,Color(0xFF8E44AD),deep,Modifier.weight(1f))}}
         item{Text("RECOVERY BY CATEGORY",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.ExtraBold)}
         item{LazyVerticalGrid(GridCells.Fixed(2),Modifier.fillMaxWidth().height(250.dp),verticalArrangement=Arrangement.spacedBy(9.dp),horizontalArrangement=Arrangement.spacedBy(9.dp),userScrollEnabled=false){items(Category.values().toList()){cat->val info=categoryInfo(cat);ActionCard(info.first,info.second,info.third,{onCategory(cat)},Modifier.fillMaxWidth())}}}
-        item{Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)){Text("RECOVERY TOOLS",fontWeight=FontWeight.ExtraBold);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Safe preview",Icons.Default.Visibility,Color(0xFF4F7CFF),{onResults()},Modifier.weight(1f));ToolPill("Offline scan",Icons.Default.CloudOff,Color(0xFF18B7A0),{quick()},Modifier.weight(1f))};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Duplicate check",Icons.Default.ContentCopy,Color(0xFFE67E22),{onResults()},Modifier.weight(1f));ToolPill("Recovery history",Icons.Default.History,Color(0xFF8E44AD),{history()},Modifier.weight(1f))}}}
+        item{Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)){Text("RECOVERY TOOLS",fontWeight=FontWeight.ExtraBold);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Safe preview",Icons.Default.Visibility,Color(0xFF4F7CFF),{onResults()},Modifier.weight(1f));ToolPill("Offline scan",Icons.Default.CloudOff,Color(0xFF18B7A0),{quick()},Modifier.weight(1f))};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){ToolPill("Duplicate check",Icons.Default.ContentCopy,Color(0xFFE67E22),onDuplicateCheck,Modifier.weight(1f));ToolPill("Recovery history",Icons.Default.History,Color(0xFF8E44AD),{history()},Modifier.weight(1f))}}}
         item{OutlinedButton(onClick=history,Modifier.fillMaxWidth()){Icon(Icons.Default.History,null);Spacer(Modifier.width(6.dp));Text("RECOVERY HISTORY")}}
     }
 }
@@ -554,7 +571,35 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
     val context = LocalContext.current
     var paused by remember { mutableStateOf(false) }
     var scanJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
+    fun launchScanAfterPermission() {
+        if (scanning || scanJob?.isActive == true) return
+        setScanning(true)
+        setProgress(0f)
+        scanJob = scope.launch {
+            try {
+                val result = queryFiles(context, category)
+                for (i in 1..24) {
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    while (paused) {
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        delay(100)
+                    }
+                    delay(if (mode == Mode.DEEP) 55 else 30)
+                    setProgress(i / 24f)
+                }
+                prefs.edit().putString("last_scan", DateFormat.getDateTimeInstance().format(Date())).putInt("last_count", result.size).apply()
+                done(result)
+            } finally {
+                scanJob = null
+                setScanning(false)
+                paused = false
+            }
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        launchScanAfterPermission()
+    }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
         item { Card(Modifier.shadow(3.dp, RoundedCornerShape(18.dp)), elevation = CardDefaults.cardElevation(2.dp)) { Column(Modifier.padding(14.dp)) { Text(if (mode == Mode.QUICK) "QUICK RECOVERY" else "DEEP RECOVERY", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold); category?.let { Text(categoryInfo(it).first.uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) } } } }
         item {
@@ -586,18 +631,10 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
                 LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp)); Text("${(progress * 100).toInt()}% • $count FILES"); Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) { OutlinedButton(onClick = { paused = !paused }) { Text(if (paused) "RESUME" else "PAUSE") }; OutlinedButton(onClick = { scanJob?.cancel(); scanJob = null; setScanning(false); paused = false; setProgress(0f) }) { Text("CANCEL") } }
             } else {
                 Text("READY TO SCAN", fontWeight = FontWeight.Bold); Spacer(Modifier.height(9.dp)); Button(onClick = {
-                    if (Build.VERSION.SDK_INT >= 33) permissionLauncher.launch(arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_AUDIO))
-                    setScanning(true); setProgress(0f)
-                    scanJob = scope.launch {
-                        try {
-                            val result = queryFiles(context, category)
-                            for (i in 1..24) { kotlinx.coroutines.currentCoroutineContext().ensureActive(); while (paused) { kotlinx.coroutines.currentCoroutineContext().ensureActive(); delay(100) }; delay(if (mode == Mode.DEEP) 55 else 30); setProgress(i / 24f) }
-                            prefs.edit().putString("last_scan", DateFormat.getDateTimeInstance().format(Date())).putInt("last_count", result.size).apply()
-                            setScanning(false)
-                            done(result)
-                        } finally {
-                            scanJob = null
-                        }
+                    if (Build.VERSION.SDK_INT >= 33) {
+                        permissionLauncher.launch(arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_AUDIO))
+                    } else {
+                        launchScanAfterPermission()
                     }
                 }, modifier = Modifier.fillMaxWidth()) { Text("START SCAN") }
             }
@@ -638,13 +675,12 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
     val duplicateKeys = files.groupingBy { it.name.trim().lowercase() + "|" + it.size }.eachCount().filterValues { it > 1 }.keys
     val duplicateFiles = files.filter { it.name.trim().lowercase() + "|" + it.size in duplicateKeys }
 
-    val visible = files.filter { it.name.contains(search, true) }.let {
-        val filtered = if (duplicateOnly) it.filter { file -> file.name.trim().lowercase() + "|" + file.size in duplicateKeys } else it
-        filtered
+    val visible = files.filter { it.name.contains(search, true) }.let { filtered ->
+        val duplicateFiltered = if (duplicateOnly) filtered.filter { file -> file.name.trim().lowercase() + "|" + file.size in duplicateKeys } else filtered
         when (sort) {
-            1 -> it.sortedByDescending(FoundFile::size)
-            2 -> it.sortedByDescending(FoundFile::modified)
-            else -> it.sortedBy { file -> file.name.lowercase() }
+            1 -> duplicateFiltered.sortedByDescending(FoundFile::size)
+            2 -> duplicateFiltered.sortedByDescending(FoundFile::modified)
+            else -> duplicateFiltered.sortedBy { file -> file.name.lowercase() }
         }
     }
 
