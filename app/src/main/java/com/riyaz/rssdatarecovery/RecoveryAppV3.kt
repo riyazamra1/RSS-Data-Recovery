@@ -254,6 +254,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
     var page by remember { mutableStateOf(Page.HOME) }
     var mode by remember { mutableStateOf(Mode.QUICK) }
     var category by remember { mutableStateOf<Category?>(null) }
+    var showCategoryPicker by remember { mutableStateOf(false) }
     var drawerOpen by remember { mutableStateOf(false) }
     var files by remember { mutableStateOf(emptyList<FoundFile>()) }
     var scanning by remember { mutableStateOf(false) }
@@ -327,9 +328,9 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                                 BlurMenuItem("App Features",Icons.Default.AutoAwesome,Color(0xFFFFB21A),page==Page.FEATURES){navigate(Page.FEATURES)}
                                 BlurMenuItem("Quick Recovery",Icons.Default.FlashOn,Color(0xFFFF8A3D),page==Page.SCAN && mode==Mode.QUICK){mode=Mode.QUICK;category=null;navigate(Page.SCAN)}
                                 BlurMenuItem("Deep Recovery",Icons.Default.Search,Color(0xFF8E44AD),page==Page.SCAN && mode==Mode.DEEP){mode=Mode.DEEP;category=null;navigate(Page.SCAN)}
-                                BlurMenuItem("Recovery by Category",Icons.Default.Category,Color(0xFF18B7A0),page==Page.SCAN && category!=null){mode=Mode.QUICK;category=null;navigate(Page.SCAN)}
+                                BlurMenuItem("Recovery by Category",Icons.Default.Category,Color(0xFF18B7A0),showCategoryPicker || (page==Page.SCAN && category!=null)){showCategoryPicker=true;drawerOpen=false}
                                 BlurMenuItem("Results",Icons.Default.Folder,Color(0xFF18B7A0),page==Page.RESULTS){navigate(Page.RESULTS)}
-                                BlurMenuItem("Duplicate Check",Icons.Default.ContentCopy,Color(0xFFE67E22),page==Page.RESULTS){navigate(Page.RESULTS)}
+                                BlurMenuItem("Duplicate Check",Icons.Default.ContentCopy,Color(0xFFE67E22),page==Page.RESULTS){ scanning=true; progress=0f; scope.launch { try { val result=queryFiles(context,null); val duplicateKeys=result.groupingBy{it.name.trim().lowercase()+"|"+it.size}.eachCount().filterValues{it>1}.keys; files=result.filter{it.name.trim().lowercase()+"|"+it.size in duplicateKeys}; count=files.size; progress=1f; navigate(Page.RESULTS) } finally { scanning=false } } }
                                 BlurMenuItem("Premium",Icons.Default.Star,Color(0xFFFFB21A),page==Page.PREMIUM){navigate(Page.PREMIUM)}
                                 BlurMenuItem("Recovery History",Icons.Default.History,Color(0xFF9B5CFF),page==Page.HISTORY){navigate(Page.HISTORY)}
                                 BlurMenuItem("Settings",Icons.Default.Settings,Color(0xFF4F7CFF),page==Page.SETTINGS){navigate(Page.SETTINGS)}
@@ -472,6 +473,35 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                 }
             }
         }
+    }
+
+    if (showCategoryPicker) {
+        AlertDialog(
+            onDismissRequest = { showCategoryPicker = false },
+            title = { Text("RECOVERY BY CATEGORY", fontWeight = FontWeight.ExtraBold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Category.values().forEach { item ->
+                        val label = item.name.lowercase().replaceFirstChar { it.uppercase() }
+                        OutlinedButton(
+                            onClick = { category = item; mode = Mode.QUICK; showCategoryPicker = false; navigate(Page.SCAN) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(when (item) {
+                                Category.IMAGE -> Icons.Default.Image
+                                Category.AUDIO -> Icons.Default.Audiotrack
+                                Category.VIDEO -> Icons.Default.Videocam
+                                Category.FILES -> Icons.Default.InsertDriveFile
+                                Category.DOCUMENTS -> Icons.Default.Description
+                            }, null)
+                            Spacer(Modifier.width(10.dp))
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showCategoryPicker = false }) { Text("CANCEL") } }
+        )
     }
 }
 
