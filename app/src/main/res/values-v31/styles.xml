@@ -1,9 +1,8 @@
 <resources>
-    <style name="Theme.RSSDataRecovery.Splash" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:windowSplashScreenBackground">#F7F7F5</item>
-        <!-- Use a compact non-adaptive drawable so Android 12+ does not apply adaptive-icon scaling. -->
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/rss_splash_icon</item>
-        <item name="android:windowSplashScreenAnimationDuration">350</item>
-        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+    <style name="Theme.RSSDataRecovery.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@android:color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/rss_splash_icon</item>
+        <item name="windowSplashScreenAnimationDuration">350</item>
+        <item name="postSplashScreenTheme">@style/Theme.RSSDataRecovery</item>
     </style>
 </resources>
