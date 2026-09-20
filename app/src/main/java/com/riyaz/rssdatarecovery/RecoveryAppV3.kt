@@ -646,15 +646,7 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
         scanJob = scope.launch {
             try {
                 val result = queryFiles(context, category)
-                for (i in 1..24) {
-                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                    while (paused) {
-                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                        delay(100)
-                    }
-                    delay(if (mode == Mode.DEEP) 55 else 30)
-                    setProgress(i / 24f)
-                }
+                setProgress(1f)
                 prefs.edit().putString("last_scan", DateFormat.getDateTimeInstance().format(Date())).putInt("last_count", result.size).apply()
                 done(result)
             } finally {
@@ -795,9 +787,9 @@ private suspend fun queryFiles(context: Context, category: Category?): List<Foun
     }
     val visible = files.filter { it.name.contains(search, true) }.let { filtered ->
         when (sort) {
-            1 -> duplicateFiltered.sortedByDescending(FoundFile::size)
-            2 -> duplicateFiltered.sortedByDescending(FoundFile::modified)
-            else -> duplicateFiltered.sortedBy { file -> file.name.lowercase() }
+            1 -> filtered.sortedByDescending(FoundFile::size)
+            2 -> filtered.sortedByDescending(FoundFile::modified)
+            else -> filtered.sortedBy { file -> file.name.lowercase() }
         }
     }
 
