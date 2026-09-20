@@ -426,23 +426,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                         { mode = Mode.DEEP; category = null; navigate(Page.SCAN) },
                         { navigate(Page.HISTORY) },
                         { navigate(Page.RESULTS) },
-                        {
-                            scanning = true
-                            progress = 0f
-                            scope.launch {
-                                try {
-                                    val result = queryFiles(context, null)
-                                    val duplicateKeys = result.groupingBy { it.name.trim().lowercase() + "|" + it.size }.eachCount().filterValues { it > 1 }.keys
-                                    files = result.filter { it.name.trim().lowercase() + "|" + it.size in duplicateKeys }
-                                    count = files.size
-                                    prefs.edit().putString("last_scan", DateFormat.getDateTimeInstance().format(Date())).putInt("last_count", files.size).apply()
-                                    progress = 1f
-                                    navigate(Page.RESULTS)
-                                } finally {
-                                    scanning = false
-                                }
-                            }
-                        }
+                        { navigate(Page.RESULTS) }
                     ) { category = it; mode = Mode.QUICK; navigate(Page.SCAN) }
 
                     Page.SCAN -> ScanScreen(
@@ -613,7 +597,7 @@ private fun pageTitle(page: Page, mode: Mode): String = when (page) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Text("APP FEATURES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("Everything available in RSS Data Recovery.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};items(features){item->Card(Modifier.fillMaxWidth().clickable{when(item.first){"Quick Recovery","Category Recovery"->onQuick();"Deep Recovery"->onDeep();"Results & Preview"->onResults();"Premium Recovery"->onPremium()}}.shadow(2.dp,RoundedCornerShape(17.dp)),shape=RoundedCornerShape(17.dp),elevation=CardDefaults.cardElevation(1.dp)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(44.dp).background(item.third.copy(alpha=.12f),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){Icon(item.second,null,tint=item.third,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Text(item.first,Modifier.weight(1f),fontWeight=FontWeight.Bold);Icon(Icons.Default.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)}}}}
 }
 
-@Composable private fun HomeScreen(quick:()->Unit,deep:()->Unit,history:()->Unit,onResults:()->Unit,onDuplicateCheck:()->Unit,onCategory:(Category)->Unit){
+@Composable private fun HomeScreen(quick:()->Unit,deep:()->Unit,history:()->Unit,onResults:()->Unit,onCategory:(Category)->Unit){
     val context=LocalContext.current;var storage by remember{mutableStateOf(storageUsage(context))};LaunchedEffect(Unit){while(true){storage=storageUsage(context);delay(1500)}}
     LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(11.dp)){
         item{Text("RECOVER YOUR FILES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold)}
