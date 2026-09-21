@@ -219,7 +219,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
             AnimatedVisibility(visible, enter = fadeIn(tween(450)) + scaleIn(initialScale = .94f, animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(500))) {
                 Card(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 18.dp).shadow(3.dp, RoundedCornerShape(30.dp)), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp)) {
                     Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(104.dp))
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(104.dp)) }
                         Text("RSS DATA RECOVERY", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                         Text("CREATE YOUR PROFILE", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("FULL NAME") }, leadingIcon = { Icon(Icons.Default.Person, null, tint = Color(0xFF4F7CFF)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
@@ -251,7 +251,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
             AnimatedVisibility(visible, enter = fadeIn(tween(500)) + scaleIn(initialScale = .94f, animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(500))) {
                 Card(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 18.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .96f)), elevation = CardDefaults.cardElevation(3.dp)) {
                     Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(86.dp))
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(86.dp)) }
                         Text("CONGRATULATIONS 👏🎉", color = Color(0xFFFFD166).copy(alpha = alpha), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                         Text("WELCOME, $name!", color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text("YOUR RECOVERY SPACE IS READY.", fontWeight = FontWeight.SemiBold)
@@ -338,7 +338,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                     Box(Modifier.fillMaxSize()) {
                         Column(Modifier.fillMaxSize()) {
                             Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(112.dp))
+                                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(112.dp)) }
                                 Spacer(Modifier.height(6.dp))
                                 Text(name,fontWeight=FontWeight.ExtraBold,fontSize=16.sp,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
                                 if(email.isNotBlank()) Text(email,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
@@ -1302,7 +1302,7 @@ private fun SettingsScreen(
         item {
             Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(22.dp)), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(64.dp))
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(64.dp)) }
                     Spacer(Modifier.height(8.dp))
                     Text("RSS DATA RECOVERY", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
                     Text("SETTINGS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
