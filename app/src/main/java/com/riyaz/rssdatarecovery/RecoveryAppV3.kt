@@ -87,7 +87,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
     var registered by remember { mutableStateOf(prefs.getBoolean("registered", false)) }
     var welcomed by remember { mutableStateOf(prefs.getBoolean("welcome_done", false)) }
     var featuresDone by remember { mutableStateOf(prefs.getBoolean("features_done", false)) }
-    var featuresSkipped by remember { mutableStateOf(prefs.getBoolean("features_skipped", false)) }
+    var featuresSkipped by remember { mutableStateOf(true) }
     var dark by remember { mutableStateOf(prefs.getBoolean("dark", false)) }
     val systemDark = isSystemInDarkTheme()
     var theme by remember { mutableIntStateOf(prefs.getInt("theme", 0).coerceIn(0, 3)) }
@@ -336,7 +336,6 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                         .padding(14.dp)
                 ) {
                     Box(Modifier.fillMaxSize()) {
-                        SoftBlurGlow(Modifier.align(Alignment.TopCenter).offset(y = 90.dp).size(300.dp), palettes[theme.coerceIn(0, palettes.lastIndex)][1])
                         Column(Modifier.fillMaxSize()) {
                             Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(112.dp))
@@ -1408,8 +1407,8 @@ private fun SettingsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text("Create and verify a 6-digit PIN. Biometric unlock is optional.")
-                    OutlinedTextField(pin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) pin = v }, Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    OutlinedTextField(confirmPin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) confirmPin = v }, Modifier.fillMaxWidth(), label = { Text("VERIFY PIN") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                    OutlinedTextField(pin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) pin = v }, Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN") }, leadingIcon = { Icon(Icons.Default.Lock, null) }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                    OutlinedTextField(confirmPin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) confirmPin = v }, Modifier.fillMaxWidth(), label = { Text("VERIFY PIN") }, leadingIcon = { Icon(Icons.Default.VerifiedUser, null) }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
                     if (available) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Fingerprint, null, tint = Color(0xFF4F7CFF)); Spacer(Modifier.width(8.dp)); Text("BIOMETRIC UNLOCK", Modifier.weight(1f), fontWeight = FontWeight.Bold)
                         Switch(checked = biometric, onCheckedChange = { biometric = it })
