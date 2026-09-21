@@ -326,20 +326,22 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        // Keep the first drawer crisp and readable: no glass/blur effect and only a light scrim over content.
+        scrimColor = Color.Black.copy(alpha = if (dark) 0.22f else 0.12f),
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier
-                    .width(320.dp)
+                    .width(304.dp)
                     .fillMaxHeight()
                     .shadow(6.dp),
-                drawerContainerColor = Color.Transparent,
+                drawerContainerColor = if (dark) Color(0xFF111820) else Color.White,
                 drawerContentColor = if (dark) Color.White else Color(0xFF172033),
-                drawerShape = RoundedCornerShape(topEnd = 30.dp, bottomEnd = 30.dp)
+                drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
             ) {
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surface)
+                        .background(if (dark) Color(0xFF111820) else Color.White)
                         .padding(14.dp)
                 ) {
                     Box(Modifier.fillMaxSize()) {
