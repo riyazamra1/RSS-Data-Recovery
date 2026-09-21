@@ -157,11 +157,18 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
             elevation = CardDefaults.cardElevation(2.dp)
         ) {
             Column(
-                Modifier.padding(26.dp),
+                Modifier.fillMaxWidth().padding(26.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Icon(Icons.Default.Lock, null, Modifier.size(54.dp), tint = Color(0xFFFFD166))
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    androidx.compose.foundation.Image(
+                        androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
+                        "RSS Data Recovery",
+                        Modifier.size(92.dp)
+                    )
+                }
+                Icon(Icons.Default.Lock, null, Modifier.size(42.dp), tint = Color(0xFFFFD166))
                 Text("RSS DATA RECOVERY", color = onSurface, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 Text("APP LOCKED", color = onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 if (prefs.getBoolean("pin_enabled", false)) {
