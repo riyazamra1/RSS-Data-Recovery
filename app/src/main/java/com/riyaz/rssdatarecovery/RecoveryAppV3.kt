@@ -105,7 +105,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
     )
     MaterialTheme(colorScheme = if (!registered || !welcomed || (!featuresDone && !featuresSkipped)) onboardingScheme else scheme) {
         if (appLocked) {
-            LockScreen(prefs, onUnlock, onPinUnlock, onForgotPin)
+            LockScreen(prefs, systemDark, onUnlock, onPinUnlock, onForgotPin)
             return@MaterialTheme
         }
         AnimatedContent(targetState = Triple(registered, welcomed, featuresDone || featuresSkipped), transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "entry") { state ->
@@ -137,34 +137,44 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
     }
 }
 
-@Composable private fun LockScreen(prefs: SharedPreferences, onUnlock: () -> Unit, onPinUnlock: (String) -> Unit, onForgotPin: () -> Unit) {
-    Box(Modifier.fillMaxSize()) {
-        AnimatedBackdrop()
-        SoftBlurGlow(Modifier.align(Alignment.Center).size(320.dp), Color(0xFF8B5CF6))
+@Composable private fun LockScreen(
+    prefs: SharedPreferences,
+    systemDark: Boolean,
+    onUnlock: () -> Unit,
+    onPinUnlock: (String) -> Unit,
+    onForgotPin: () -> Unit
+) {
+    val surface = if (systemDark) Color(0xFF18212B) else Color.White
+    val onSurface = if (systemDark) Color.White else Color(0xFF172033)
+    val muted = onSurface.copy(alpha = 0.68f)
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        AnimatedBackdrop(systemDark)
+        SoftBlurGlow(Modifier.align(Alignment.Center).size(280.dp), Color(0xFF8B5CF6))
         Card(
-            Modifier.fillMaxWidth().padding(24.dp).align(Alignment.Center),
-            shape = RoundedCornerShape(30.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF102033)),
-            elevation = CardDefaults.cardElevation(4.dp)
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp).align(Alignment.Center),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = surface),
+            elevation = CardDefaults.cardElevation(2.dp)
         ) {
             Column(
-                Modifier.padding(28.dp),
+                Modifier.padding(26.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Icon(Icons.Default.Lock, null, Modifier.size(58.dp), tint = Color(0xFFFFD166))
-                Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-                Text("APP LOCKED", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                if (prefs.getBoolean("pin_enabled", false) && !prefs.getBoolean("biometric_enabled", false)) {
+                Icon(Icons.Default.Lock, null, Modifier.size(54.dp), tint = Color(0xFFFFD166))
+                Text("RSS DATA RECOVERY", color = onSurface, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Text("APP LOCKED", color = onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                if (prefs.getBoolean("pin_enabled", false)) {
                     var pin by remember { mutableStateOf("") }
-                    Text("ENTER YOUR 6-DIGIT PIN", color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
+                    Text("ENTER YOUR 6-DIGIT PIN", color = muted, fontWeight = FontWeight.Medium)
                     OutlinedTextField(
                         value = pin,
                         onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("6-DIGIT PIN", color = Color.White) },
+                        label = { Text("6-DIGIT PIN") },
                         singleLine = true,
-                        textStyle = LocalTextStyle.current.copy(color = Color.White),
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        textStyle = LocalTextStyle.current.copy(color = onSurface),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
                     )
                     Button(onClick = { if (pin.length == 6) onPinUnlock(pin) }, modifier = Modifier.fillMaxWidth()) {
@@ -172,10 +182,15 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                         Spacer(Modifier.width(7.dp))
                         Text("UNLOCK WITH PIN")
                     }
-                    TextButton(onClick = onForgotPin) { Text("FORGOT PIN", color = Color.White) }
+                    TextButton(onClick = onForgotPin) { Text("FORGOT PIN") }
+                    if (prefs.getBoolean("biometric_enabled", false)) {
+                        Text("BIOMETRIC PROMPT IS ALSO AVAILABLE.", color = muted, style = MaterialTheme.typography.bodySmall)
+                    }
+                } else if (prefs.getBoolean("biometric_enabled", false)) {
+                    Text("BIOMETRIC UNLOCK IS ACTIVE", color = muted)
+                    Text("Follow the biometric prompt to unlock.", color = muted, style = MaterialTheme.typography.bodySmall)
                 } else {
-                    Text("BIOMETRIC UNLOCK IS ACTIVE", color = Color.White.copy(alpha = 0.85f))
-                    Text("Follow the biometric prompt to unlock.", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                    Text("APP LOCK IS ENABLED. SET A PIN OR BIOMETRIC IN SETTINGS.", color = muted, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -933,7 +948,7 @@ private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, scope: kotli
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
                         Text("UNLOCK MORE RECOVERY", fontWeight = FontWeight.ExtraBold)
-                        Text("Deep recovery, audio, video, files and original source details.", style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                        Text("Deep recovery and original-source recovery for non-image files require Premium. Image recovery remains free.", style = MaterialTheme.typography.bodySmall, maxLines = 2)
                     }
                     TextButton(onClick = upgrade) { Text("UPGRADE") }
                 }
@@ -995,481 +1010,5 @@ private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, scope: kotli
             },
             dismissButton = { TextButton(onClick = { showConfirm = false }) { Text("CANCEL") } }
         )
-    }
-}
-
-private suspend fun recoverSelectedFiles(context: Context, files: List<FoundFile>, premium: Boolean): String =
-    withContext(Dispatchers.IO) {
-        var recovered = 0
-        var failed = 0
-        var restoredFromTrash = 0
-        files.forEachIndexed { index, file ->
-            try {
-                if (file.isTrashed && Build.VERSION.SDK_INT >= 30) {
-                    if (!premium && file.category != Category.IMAGE) {
-                        failed++
-                        return@forEachIndexed
-                    }
-                    val values = android.content.ContentValues().apply { put(MediaStore.MediaColumns.IS_TRASHED, 0) }
-                    if (context.contentResolver.update(file.uri, values, null, null) <= 0) throw IllegalStateException("TRASH RESTORE FAILED")
-                    if (premium) {
-                        recovered++
-                        restoredFromTrash++
-                        return@forEachIndexed
-                    }
-                }
-                if (!premium && file.category != Category.IMAGE) {
-                    failed++
-                    return@forEachIndexed
-                }
-                val resolver = context.contentResolver
-                val mime = resolver.getType(file.uri) ?: when (file.category) {
-                    Category.IMAGE -> "image/jpeg"
-                    Category.AUDIO -> "audio/*"
-                    Category.VIDEO -> "video/*"
-                    Category.DOCUMENTS -> "application/octet-stream"
-                    Category.FILES -> "application/octet-stream"
-                }
-
-                if (!premium && file.category == Category.IMAGE) {
-                    val bitmap = android.graphics.BitmapFactory.decodeStream(resolver.openInputStream(file.uri))
-                        ?: throw IllegalStateException("IMAGE DECODE FAILED")
-                    val values = android.content.ContentValues().apply {
-                        put(MediaStore.Images.Media.DISPLAY_NAME, "RSS_DATA_RECOVERY_" + SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(Date()) + "_" + (index + 1) + ".jpg")
-                        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                        if (Build.VERSION.SDK_INT >= 29) {
-                            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/RSS Data Recovery")
-                            put(MediaStore.Images.Media.IS_PENDING, 1)
-                        }
-                    }
-                    val outputUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-                        ?: throw IllegalStateException("DESTINATION UNAVAILABLE")
-                    try {
-                        resolver.openOutputStream(outputUri)?.use { out ->
-                            if (!bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, out)) {
-                                throw IllegalStateException("IMAGE EXPORT FAILED")
-                            }
-                        } ?: throw IllegalStateException("OUTPUT UNAVAILABLE")
-                        if (Build.VERSION.SDK_INT >= 29) {
-                            values.clear()
-                            values.put(MediaStore.Images.Media.IS_PENDING, 0)
-                            resolver.update(outputUri, values, null, null)
-                        }
-                    } catch (e: Exception) {
-                        resolver.delete(outputUri, null, null)
-                        throw e
-                    } finally {
-                        bitmap.recycle()
-                    }
-                } else {
-                    val values = android.content.ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, file.name.ifBlank { "RSS_RECOVERED_\${System.currentTimeMillis()}" })
-                        put(MediaStore.MediaColumns.MIME_TYPE, mime)
-                        if (Build.VERSION.SDK_INT >= 29) {
-                            put(MediaStore.MediaColumns.RELATIVE_PATH, if (file.category == Category.IMAGE) "Pictures/RSS Data Recovery" else "Download/RSS Data Recovery")
-                            put(MediaStore.MediaColumns.IS_PENDING, 1)
-                        }
-                    }
-                    val collection = if (file.category == Category.IMAGE) MediaStore.Images.Media.EXTERNAL_CONTENT_URI else MediaStore.Downloads.EXTERNAL_CONTENT_URI
-                    val outputUri = resolver.insert(collection, values)
-                        ?: throw IllegalStateException("DESTINATION UNAVAILABLE")
-                    try {
-                        resolver.openInputStream(file.uri)?.use { input ->
-                            resolver.openOutputStream(outputUri)?.use { output -> input.copyTo(output) }
-                                ?: throw IllegalStateException("OUTPUT UNAVAILABLE")
-                        } ?: throw IllegalStateException("SOURCE UNAVAILABLE")
-                        if (Build.VERSION.SDK_INT >= 29) {
-                            values.clear()
-                            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
-                            resolver.update(outputUri, values, null, null)
-                        }
-                    } catch (e: Exception) {
-                        resolver.delete(outputUri, null, null)
-                        throw e
-                    }
-                }
-                recovered++
-            } catch (_: Exception) {
-                failed++
-            }
-        }
-        when {
-            recovered > 0 && failed == 0 && restoredFromTrash == recovered -> "RESTORED $recovered TRASHED FILE(S) TO THEIR ORIGINAL LOCATION."
-            recovered > 0 && failed == 0 -> "RECOVERED $recovered FILE(S). $restoredFromTrash RESTORED FROM TRASH."
-            recovered > 0 -> "RECOVERED $recovered FILE(S). $failed FILE(S) COULD NOT BE RECOVERED."
-            else -> "RECOVERY FAILED. PLEASE CHECK STORAGE PERMISSIONS AND TRY AGAIN."
-        }
-    }
-
-@Composable
-private fun PremiumScreen(active: Boolean, onUpgrade: () -> Unit) {
-    val rows = listOf(
-        Triple("Quick image recovery", true, true),
-        Triple("Deep recovery engine", false, true),
-        Triple("Audio & video recovery", false, true),
-        Triple("Documents & files", false, true),
-        Triple("Original file names", false, true),
-        Triple("Original metadata", false, true),
-        Triple("Original quality", false, true),
-        Triple("Large batch recovery", false, true),
-        Triple("Priority recovery", false, true),
-        Triple("Recovery destination control", true, true),
-        Triple("Recovery history", true, true),
-        Triple("App lock & biometric", true, true)
-    )
-
-    LazyColumn(
-        Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        item {
-            Text(
-                "FEATURE COMPARISON",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold
-            )
-            Text(
-                "FREE vs PRO recovery capabilities",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        item {
-            Card(
-                Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(18.dp)),
-                shape = RoundedCornerShape(18.dp)
-            ) {
-                Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("FEATURE", Modifier.weight(1f), fontWeight = FontWeight.Bold)
-                        Text("FREE", Modifier.width(55.dp), fontWeight = FontWeight.Bold)
-                        Text(
-                            "PRO",
-                            Modifier.width(55.dp),
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    rows.forEach { (label, free, pro) ->
-                        Row(
-                            Modifier.fillMaxWidth().padding(vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                            Icon(
-                                if (free) Icons.Default.CheckCircle else Icons.Default.Lock,
-                                null,
-                                Modifier.width(55.dp).size(20.dp),
-                                tint = if (free) Color(0xFF27AE60) else Color(0xFF8A94A6)
-                            )
-                            Icon(
-                                if (pro) Icons.Default.CheckCircle else Icons.Default.Lock,
-                                null,
-                                Modifier.width(55.dp).size(20.dp),
-                                tint = Color(0xFFFFB21A)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        item {
-            Card(
-                Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(20.dp)),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(Icons.Default.Star, null, Modifier.size(38.dp), tint = Color(0xFFFFB21A))
-                    Text(
-                        if (active) "PREMIUM ACTIVE" else "RSS DATA RECOVERY PREMIUM",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Text(
-                        if (active) "All recovery capabilities are unlocked."
-                        else "Unlock the complete recovery toolkit.",
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                    if (!active) {
-                        Button(onClick = onUpgrade, Modifier.fillMaxWidth()) {
-                            Text("UPGRADE NOW")
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable private fun HistoryScreen(prefs: SharedPreferences) {
-    val lastScan = prefs.getString("last_scan", null)
-    val recoveryHistory = prefs.getString("recovery_history", "").orEmpty()
-    LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { Text("RECOVERY HISTORY", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold) }
-        item {
-            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp))) {
-                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text("RECENT SCAN", fontWeight = FontWeight.Bold)
-                    if (lastScan == null) Text("NO RECENT SCANS") else {
-                        Text(lastScan)
-                        Text("${prefs.getInt("last_count", 0)} FILES")
-                    }
-                }
-            }
-        }
-        item { Text("RECOVERY ACTIVITY", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-        if (recoveryHistory.isBlank()) {
-            item { Text("NO RECOVERY ACTIVITY YET") }
-        } else {
-            recoveryHistory.lineSequence().filter { it.isNotBlank() }.forEach { entry ->
-                item {
-                    Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(16.dp))) {
-                        Text(entry, Modifier.padding(14.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsScreen(
-    prefs: SharedPreferences,
-    dark: Boolean,
-    onDarkChange: (Boolean) -> Unit,
-    theme: Int,
-    onThemeChange: (Int) -> Unit
-) {
-    val context = LocalContext.current
-    var lock by remember { mutableStateOf(prefs.getBoolean("app_lock", false)) }
-    var biometric by remember { mutableStateOf(prefs.getBoolean("biometric_enabled", false)) }
-    var showPinDialog by remember { mutableStateOf(false) }
-    var pin by remember { mutableStateOf("") }
-    var confirmPin by remember { mutableStateOf("") }
-    var haptics by remember { mutableStateOf(prefs.getBoolean("haptics", true)) }
-    var notifications by remember { mutableStateOf(prefs.getBoolean("notifications", true)) }
-    var autoScan by remember { mutableStateOf(prefs.getBoolean("auto_scan", false)) }
-    var confirmRecovery by remember { mutableStateOf(prefs.getBoolean("confirm_recovery", true)) }
-    var previews by remember { mutableStateOf(prefs.getBoolean("previews", true)) }
-    var saveHistory by remember { mutableStateOf(prefs.getBoolean("save_history", true)) }
-
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item {
-            Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(22.dp)), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(64.dp))
-                    Spacer(Modifier.height(8.dp))
-                    Text("RSS DATA RECOVERY", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-                    Text("SETTINGS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        item { SettingSwitch("DARK APPEARANCE", dark, onDarkChange) }
-        item {
-            Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp)) {
-                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Lock, null, tint = Color(0xFFE74C3C))
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("APP LOCK", fontWeight = FontWeight.Bold)
-                        Text(if (lock) "Enabled — security settings are available below." else "Create a verified PIN and optional biometric unlock.", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Switch(checked = lock, onCheckedChange = { enabled ->
-                        if (enabled) {
-                            pin = ""; confirmPin = ""; showPinDialog = true
-                        } else {
-                            lock = false
-                            biometric = false
-                            prefs.edit().putBoolean("app_lock", false).putBoolean("pin_enabled", false).putBoolean("biometric_enabled", false).apply()
-                        }
-                    })
-                }
-            }
-        }
-        if (lock) item {
-            OutlinedButton(onClick = { pin = ""; confirmPin = ""; showPinDialog = true }, Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Security, null); Spacer(Modifier.width(6.dp)); Text("SET / CHANGE PIN & BIOMETRIC")
-            }
-        }
-        item { SettingSwitch("HAPTIC FEEDBACK", haptics) { haptics = it; prefs.edit().putBoolean("haptics", it).apply() } }
-        item { SettingSwitch("SCAN NOTIFICATIONS", notifications) { notifications = it; prefs.edit().putBoolean("notifications", it).apply() } }
-        item { SettingSwitch("AUTO SCAN ON LAUNCH", autoScan) { autoScan = it; prefs.edit().putBoolean("auto_scan", it).apply() } }
-        item { SettingSwitch("CONFIRM BEFORE RECOVERY", confirmRecovery) { confirmRecovery = it; prefs.edit().putBoolean("confirm_recovery", it).apply() } }
-        item { SettingSwitch("SHOW FILE PREVIEWS", previews) { previews = it; prefs.edit().putBoolean("previews", it).apply() } }
-        item { SettingSwitch("SAVE RECOVERY HISTORY", saveHistory) { saveHistory = it; prefs.edit().putBoolean("save_history", it).apply() } }
-        item {
-            Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp)) {
-                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DeleteSweep, null, tint = Color(0xFFE74C3C)); Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) { Text("CLEAR RECOVERY HISTORY", fontWeight = FontWeight.Bold); Text("Remove saved scan and recovery activity.", style = MaterialTheme.typography.bodySmall) }
-                    TextButton(onClick = { prefs.edit().remove("recovery_history").remove("last_scan").remove("last_count").apply() }) { Text("CLEAR") }
-                }
-            }
-        }
-        item { Text("COLOR THEME", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                palettes.forEachIndexed { idx, colors ->
-                    Button(onClick = { onThemeChange(idx) }, colors = ButtonDefaults.buttonColors(containerColor = colors[0]), modifier = Modifier.weight(1f)) {
-                        Text(if (idx == theme) "✓" else idx.toString())
-                    }
-                }
-            }
-        }
-        item {
-            Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp)) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("PRIVACY & SAFETY", fontWeight = FontWeight.Bold)
-                    Text("SCANNING STAYS ON THE DEVICE AND USES ANDROID STORAGE PERMISSIONS.", style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-        item {
-            val allFiles = Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager()
-            Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp)) {
-                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.FolderOpen, null, tint = Color(0xFF4F7CFF)); Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("ALL FILES ACCESS", fontWeight = FontWeight.Bold)
-                            Text(if (allFiles) "ENABLED — Deep and document scans can access shared storage." else "Enable for Deep Recovery and document/file scanning.", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    if (Build.VERSION.SDK_INT >= 30 && !allFiles) Button(onClick = {
-                        runCatching { context.startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${context.packageName}"))) }
-                    }, Modifier.fillMaxWidth()) { Text("OPEN STORAGE ACCESS SETTINGS") }
-                }
-            }
-        }
-        item {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo), "Razeen Secure Solution", Modifier.size(82.dp).clickable {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc")))
-                })
-                Spacer(Modifier.height(4.dp)); Text("RAZEEN SECURE SOLUTION", fontWeight = FontWeight.ExtraBold)
-                Text("Mobile & PC Software • CCTV Camera Installation • Networking • System Administration", style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                Text("077 115 5504  •  070 155 5504", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                Text("rsscctvsolution@gmail.com", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                Text("www.rsscctvsolution.eu.cc", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-            }
-        }
-    }
-    if (showPinDialog) {
-        val available = BiometricManager.from(context).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS
-        AlertDialog(
-            onDismissRequest = { showPinDialog = false },
-            title = { Text("APP LOCK SECURITY") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text("Create and verify a 6-digit PIN. Biometric unlock is optional.")
-                    OutlinedTextField(pin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) pin = v }, Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    OutlinedTextField(confirmPin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) confirmPin = v }, Modifier.fillMaxWidth(), label = { Text("VERIFY PIN") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    if (available) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Fingerprint, null, tint = Color(0xFF4F7CFF)); Spacer(Modifier.width(8.dp)); Text("BIOMETRIC UNLOCK", Modifier.weight(1f), fontWeight = FontWeight.Bold)
-                        Switch(checked = biometric, onCheckedChange = { biometric = it })
-                    }
-                }
-            },
-            confirmButton = {
-                Button(enabled = pin.length == 6 && pin == confirmPin, onClick = {
-                    prefs.edit().putString("pin_hash", hashPin(pin)).putBoolean("pin_enabled", true).putBoolean("app_lock", true).putBoolean("biometric_enabled", biometric && available).apply()
-                    lock = true; showPinDialog = false; pin = ""; confirmPin = ""
-                }) { Text("VERIFY & SAVE") }
-            },
-            dismissButton = { TextButton(onClick = { showPinDialog = false }) { Text("CANCEL") } }
-        )
-    }
-}
-
-@Composable
-private fun AppFeaturesOnboarding(systemDark: Boolean, done: () -> Unit, skip: () -> Unit) {
-    val features = listOf(
-        Triple("SMART RECOVERY", "Quick and Deep recovery modes help you scan your device with the mode you choose.", Icons.Default.Restore),
-        Triple("RECOVERY RESULTS", "Review scan counts, categories, and matching files from a dedicated results workspace.", Icons.Default.Assessment),
-        Triple("PRIVACY & CONTROL", "App lock, biometric unlock, appearance controls, scan preferences, and recovery history stay under your control.", Icons.Default.Security)
-    )
-    var index by remember { mutableIntStateOf(0) }
-    val transition = rememberInfiniteTransition(label = "featureMotion")
-    val drift1 by transition.animateFloat(-70f, 70f, infiniteRepeatable(tween(4200), RepeatMode.Reverse), label = "drift1")
-    val drift2 by transition.animateFloat(60f, -60f, infiniteRepeatable(tween(5200), RepeatMode.Reverse), label = "drift2")
-    val drift3 by transition.animateFloat(-45f, 45f, infiniteRepeatable(tween(3600), RepeatMode.Reverse), label = "drift3")
-    val scale by transition.animateFloat(0.96f, 1.04f, infiniteRepeatable(tween(1800), RepeatMode.Reverse), label = "featureScale")
-    val backgrounds = if (systemDark) listOf(
-        listOf(Color(0xFF07111F), Color(0xFF123B5D), Color(0xFF0A1020)),
-        listOf(Color(0xFF0A1715), Color(0xFF12483C), Color(0xFF081311)),
-        listOf(Color(0xFF17100A), Color(0xFF55351B), Color(0xFF110C09))
-    ) else listOf(
-        listOf(Color.White, Color(0xFFEAF5FF), Color.White),
-        listOf(Color.White, Color(0xFFEAFBF6), Color.White),
-        listOf(Color.White, Color(0xFFFFF5E8), Color.White)
-    )
-    Box(Modifier.fillMaxSize()) {
-        androidx.compose.animation.Crossfade(targetState = index, animationSpec = tween(450), label = "featureBackground") { pageIndex ->
-            Box(Modifier.fillMaxSize().background(Brush.linearGradient(backgrounds[pageIndex]))) {
-                Icon(features[pageIndex].third, null, Modifier.align(Alignment.Center).size(330.dp).graphicsLayer { alpha = if (systemDark) .045f else .035f }, tint = palettes[pageIndex % palettes.size][0])
-            }
-        }
-        Icon(Icons.Default.Cloud, null, Modifier.offset(x = drift1.dp, y = (-150).dp).size(76.dp).graphicsLayer { alpha = .08f }, tint = palettes[1][0])
-        Icon(Icons.Default.Folder, null, Modifier.align(Alignment.CenterStart).offset(x = drift2.dp, y = 30.dp).size(64.dp).graphicsLayer { alpha = .08f }, tint = palettes[2][0])
-        Icon(Icons.Default.Security, null, Modifier.align(Alignment.BottomEnd).offset(x = drift3.dp, y = (-130).dp).size(70.dp).graphicsLayer { alpha = .08f }, tint = palettes[3][0])
-        Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 30.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text("RSS DATA RECOVERY", fontWeight = FontWeight.ExtraBold, fontSize = 24.sp)
-            Text("APP FEATURES", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(28.dp))
-            AnimatedContent(targetState = index, transitionSpec = { fadeIn(tween(280)) togetherWith fadeOut(tween(180)) }, label = "featurePage") { pageIndex ->
-                val feature = features[pageIndex]
-                Column(Modifier.fillMaxWidth().graphicsLayer { scaleX = scale; scaleY = scale }.padding(horizontal = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                    Icon(feature.third, null, Modifier.size(86.dp), tint = palettes[pageIndex % palettes.size][0])
-                    Text(feature.first, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                    Text(feature.second, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 24.sp)
-                }
-            }
-            Spacer(Modifier.height(28.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                features.indices.forEach { i -> Box(Modifier.size(if (i == index) 24.dp else 8.dp, 8.dp).clip(RoundedCornerShape(8.dp)).background(if (i == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = .25f))) }
-            }
-            Spacer(Modifier.height(28.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = skip, Modifier.weight(1f)) { Text("SKIP FOR NOW") }
-                Button(onClick = { if (index == features.lastIndex) done() else index++ }, Modifier.weight(1f)) { Text(if (index == features.lastIndex) "START RECOVERY" else "NEXT") }
-            }
-            Spacer(Modifier.height(10.dp))
-            Text("${index + 1} / ${features.size}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
-        }
-    }
-}
-
-@Composable private fun SettingSwitch(title: String, value: Boolean, onChange: (Boolean) -> Unit) { val icon=when{title.contains("DARK")->Icons.Default.DarkMode;title.contains("LOCK")->Icons.Default.Lock;title.contains("HAPTIC")->Icons.Default.Vibration;title.contains("NOTIFICATION")->Icons.Default.Notifications;title.contains("AUTO")->Icons.Default.PlayCircle;title.contains("CONFIRM")->Icons.Default.Verified;title.contains("PREVIEW")->Icons.Default.Visibility;else->Icons.Default.History};val tint=when{title.contains("DARK")->Color(0xFF8E6CFF);title.contains("LOCK")->Color(0xFFE74C3C);title.contains("HAPTIC")->Color(0xFF18B7A0);title.contains("NOTIFICATION")->Color(0xFFFFB21A);title.contains("AUTO")->Color(0xFF4F7CFF);title.contains("CONFIRM")->Color(0xFF27AE60);title.contains("PREVIEW")->Color(0xFF9B5CFF);else->Color(0xFF2980B9)};Row(Modifier.fillMaxWidth().padding(vertical=4.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon,null,Modifier.size(24.dp),tint=tint);Spacer(Modifier.width(10.dp));Text(title,Modifier.weight(1f),fontWeight=FontWeight.Medium);Switch(checked=value,onCheckedChange=onChange)}}
-
-private fun hashPin(pin: String): String = MessageDigest.getInstance("SHA-256").digest(pin.toByteArray()).joinToString("") { it.toString(16).padStart(2, '0') }
-
-private fun scanNotification(context: Context, active: Boolean) {
-    val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(NotificationChannel("rss_scan", "Recovery Scan", NotificationManager.IMPORTANCE_LOW))
-    if (active) { val builder = if (Build.VERSION.SDK_INT >= 26) android.app.Notification.Builder(context, "rss_scan") else android.app.Notification.Builder(context); builder.setSmallIcon(android.R.drawable.stat_sys_download).setContentTitle("SCAN IN PROGRESS").setContentText("RSS Data Recovery is scanning").setOngoing(true); manager.notify(991, builder.build()) } else manager.cancel(991)
-}
-private fun storageUsage(context: Context): Triple<String, String, Float> {
-    val root = android.os.Environment.getExternalStorageDirectory()
-    val stat = android.os.StatFs(root.absolutePath)
-    val total = stat.totalBytes.coerceAtLeast(1L)
-    val free = stat.availableBytes.coerceIn(0L, total)
-    val used = total - free
-    return Triple(formatBytes(used), formatBytes(free), used.toFloat() / total.toFloat())
-}
-
-private fun formatBytes(value: Long): String = when { value < 1024 -> "$value B"; value < 1048576 -> "${value / 1024} KB"; value < 1073741824 -> "${value / 1048576} MB"; else -> "${value / 1073741824} GB" }
-
-private suspend fun registerRecoveryCustomer(name: String, email: String) {
-    runCatching {
-        RssCoreClient.register(name, email)
     }
 }
