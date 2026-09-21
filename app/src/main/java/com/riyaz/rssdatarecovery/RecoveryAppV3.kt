@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -64,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -103,6 +105,19 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
     val onboardingScheme = if (systemDark) darkColorScheme(primary = palette[0], secondary = palette[1]) else lightColorScheme(
         primary = palette[0], secondary = palette[1], background = Color.White, surface = Color.White, surfaceVariant = Color(0xFFF5F6F8)
     )
+    val activity = context as? android.app.Activity
+    DisposableEffect(dark, activity) {
+        val window = activity?.window
+        if (window != null) {
+            window.statusBarColor = if (dark) Color(0xFF07111F).toArgb() else Color.White.toArgb()
+            window.navigationBarColor = if (dark) Color(0xFF07111F).toArgb() else Color.White.toArgb()
+            val controller = WindowCompat.getInsetsController(window, window.decorView)
+            controller.isAppearanceLightStatusBars = !dark
+            controller.isAppearanceLightNavigationBars = !dark
+        }
+        onDispose { }
+    }
+
     MaterialTheme(colorScheme = if (!registered || !welcomed || (!featuresDone && !featuresSkipped)) onboardingScheme else scheme) {
         if (appLocked) {
             LockScreen(prefs, systemDark, onUnlock, onPinUnlock, onForgotPin)
@@ -1318,7 +1333,19 @@ private fun SettingsScreen(
                 }
             }
         }
-        item { SettingSwitch("DARK APPEARANCE", dark, onDarkChange) }
+        item {
+            Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DarkMode, null, tint = Color(0xFF8E6CFF))
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("DARK APPEARANCE", fontWeight = FontWeight.Bold)
+                        Text(if (dark) "Dark appearance is ON." else "Light appearance is ON.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = dark, onCheckedChange = onDarkChange)
+                }
+            }
+        }
         item {
             Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp)) {
                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
