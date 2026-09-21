@@ -731,6 +731,8 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
 
 private suspend fun queryFiles(context: Context, category: Category?, onProgress: suspend (processed: Int, found: Int, total: Int) -> Unit = { _, _, _ -> }): List<FoundFile> = withContext(Dispatchers.IO) {
     val result = mutableListOf<FoundFile>()
+    // Content-based duplicate detection; only same-size candidates are hashed.
+    val seenHashesBySize = mutableMapOf<Long, MutableSet<String>>()
     val resolver = context.contentResolver
     val uri = MediaStore.Files.getContentUri("external")
     val projection = mutableListOf(
@@ -775,13 +777,34 @@ private suspend fun queryFiles(context: Context, category: Category?, onProgress
                 else -> Category.FILES
             }
             if (category == null || category == kind) {
-                result += FoundFile(it.getString(nameIndex) ?: "Unnamed file", size, Uri.withAppendedPath(uri, it.getLong(idIndex).toString()), kind, it.getLong(dateIndex), trashed)
+                val fileUri = Uri.withAppendedPath(uri, it.getLong(idIndex).toString())
+                val duplicate = if (size > 0L) {
+                    val hash = sha256Content(resolver, fileUri)
+                    hash != null && !seenHashesBySize.getOrPut(size) { mutableSetOf() }.add(hash)
+                } else false
+                if (!duplicate) {
+                    result += FoundFile(it.getString(nameIndex) ?: "Unnamed file", size, fileUri, kind, it.getLong(dateIndex), trashed)
+                }
             }
             if (processedRows == 1 || processedRows % 10 == 0 || processedRows == totalRows) onProgress(processedRows, result.size, totalRows)
         }
     }
     result
 }
+
+
+private fun sha256Content(resolver: ContentResolver, uri: Uri): String? = runCatching {
+    val digest = MessageDigest.getInstance("SHA-256")
+    resolver.openInputStream(uri)?.use { input ->
+        val buffer = ByteArray(64 * 1024)
+        while (true) {
+            val read = input.read(buffer)
+            if (read <= 0) break
+            digest.update(buffer, 0, read)
+        }
+    } ?: return null
+    digest.digest().joinToString("") { "%02x".format(it) }
+}.getOrNull()
 
 @Composable
 private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, scope: kotlinx.coroutines.CoroutineScope, upgrade: () -> Unit) {
