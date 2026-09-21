@@ -11,11 +11,6 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -57,12 +52,6 @@ class MainActivity : FragmentActivity() {
             }
             if (showStartupSplash) {
                 val systemDark = isSystemInDarkTheme()
-                val splashPulse = rememberInfiniteTransition(label = "splashPulse")
-                val logoScale by splashPulse.animateFloat(
-                    0.96f, 1.02f,
-                    infiniteRepeatable(tween(900), RepeatMode.Reverse),
-                    label = "splashLogoScale"
-                )
                 Box(modifier = Modifier.fillMaxSize()) {
                     Box(Modifier.fillMaxSize().background(if (systemDark) Color(0xFF07111F) else Color.White))
                     Box(
@@ -74,10 +63,7 @@ class MainActivity : FragmentActivity() {
                         Image(
                             painter = painterResource(id = R.drawable.rss_data_recovery_logo),
                             contentDescription = "RSS Data Recovery",
-                            modifier = Modifier.size(160.dp).graphicsLayer {
-                                scaleX = logoScale
-                                scaleY = logoScale
-                            },
+                            modifier = Modifier.size(160.dp),
                             contentScale = ContentScale.Fit
                         )
                     }

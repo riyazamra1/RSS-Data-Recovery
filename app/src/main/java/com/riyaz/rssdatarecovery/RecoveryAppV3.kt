@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -64,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -87,7 +89,7 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
     var registered by remember { mutableStateOf(prefs.getBoolean("registered", false)) }
     var welcomed by remember { mutableStateOf(prefs.getBoolean("welcome_done", false)) }
     var featuresDone by remember { mutableStateOf(prefs.getBoolean("features_done", false)) }
-    var featuresSkipped by remember { mutableStateOf(false) }
+    var featuresSkipped by remember { mutableStateOf(true) }
     var dark by remember { mutableStateOf(prefs.getBoolean("dark", false)) }
     val systemDark = isSystemInDarkTheme()
     var theme by remember { mutableIntStateOf(prefs.getInt("theme", 0).coerceIn(0, 3)) }
@@ -103,16 +105,29 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
     val onboardingScheme = if (systemDark) darkColorScheme(primary = palette[0], secondary = palette[1]) else lightColorScheme(
         primary = palette[0], secondary = palette[1], background = Color.White, surface = Color.White, surfaceVariant = Color(0xFFF5F6F8)
     )
+    val activity = context as? android.app.Activity
+    DisposableEffect(dark, activity) {
+        val window = activity?.window
+        if (window != null) {
+            window.statusBarColor = if (dark) Color(0xFF07111F).toArgb() else Color.White.toArgb()
+            window.navigationBarColor = if (dark) Color(0xFF07111F).toArgb() else Color.White.toArgb()
+            val controller = WindowCompat.getInsetsController(window, window.decorView)
+            controller.isAppearanceLightStatusBars = !dark
+            controller.isAppearanceLightNavigationBars = !dark
+        }
+        onDispose { }
+    }
+
     MaterialTheme(colorScheme = if (!registered || !welcomed || (!featuresDone && !featuresSkipped)) onboardingScheme else scheme) {
         if (appLocked) {
-            LockScreen(prefs, onUnlock, onPinUnlock, onForgotPin)
+            LockScreen(prefs, systemDark, onUnlock, onPinUnlock, onForgotPin)
             return@MaterialTheme
         }
         AnimatedContent(targetState = Triple(registered, welcomed, featuresDone || featuresSkipped), transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "entry") { state ->
             when {
                 !state.first -> RegistrationScreen(systemDark) { name, email -> prefs.edit().putBoolean("registered", true).putString("name", name).putString("email", email).apply(); registered = true; scope.launch { registerRecoveryCustomer(name, email) } }
                 !state.second -> WelcomeScreen(prefs.getString("name", "USER") ?: "USER", systemDark) { prefs.edit().putBoolean("welcome_done", true).apply(); welcomed = true }
-                !state.third -> AppFeaturesOnboarding(systemDark, { prefs.edit().putBoolean("features_done", true).apply(); featuresDone = true }, { featuresSkipped = true })
+                !state.third -> AppFeaturesOnboarding(systemDark, { prefs.edit().putBoolean("features_done", true).apply(); featuresDone = true }, { prefs.edit().putBoolean("features_skipped", true).apply(); featuresSkipped = true })
                 else -> RecoveryMain(prefs, dark, { dark = it; prefs.edit().putBoolean("dark", it).apply() }, theme, { theme = it; prefs.edit().putInt("theme", it).apply() })
             }
         }
@@ -137,34 +152,51 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
     }
 }
 
-@Composable private fun LockScreen(prefs: SharedPreferences, onUnlock: () -> Unit, onPinUnlock: (String) -> Unit, onForgotPin: () -> Unit) {
-    Box(Modifier.fillMaxSize()) {
-        AnimatedBackdrop()
-        SoftBlurGlow(Modifier.align(Alignment.Center).size(320.dp), Color(0xFF8B5CF6))
+@Composable private fun LockScreen(
+    prefs: SharedPreferences,
+    systemDark: Boolean,
+    onUnlock: () -> Unit,
+    onPinUnlock: (String) -> Unit,
+    onForgotPin: () -> Unit
+) {
+    val surface = if (systemDark) Color(0xFF18212B) else Color.White
+    val onSurface = if (systemDark) Color.White else Color(0xFF172033)
+    val muted = onSurface.copy(alpha = 0.68f)
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        AnimatedBackdrop(systemDark)
+        SoftBlurGlow(Modifier.align(Alignment.Center).size(280.dp), Color(0xFF8B5CF6))
         Card(
-            Modifier.fillMaxWidth().padding(24.dp).align(Alignment.Center),
-            shape = RoundedCornerShape(30.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF102033)),
-            elevation = CardDefaults.cardElevation(4.dp)
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp).align(Alignment.Center),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = surface),
+            elevation = CardDefaults.cardElevation(2.dp)
         ) {
             Column(
-                Modifier.padding(28.dp),
+                Modifier.fillMaxWidth().padding(26.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Icon(Icons.Default.Lock, null, Modifier.size(58.dp), tint = Color(0xFFFFD166))
-                Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-                Text("APP LOCKED", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                if (prefs.getBoolean("pin_enabled", false) && !prefs.getBoolean("biometric_enabled", false)) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    androidx.compose.foundation.Image(
+                        androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),
+                        "RSS Data Recovery",
+                        Modifier.size(92.dp)
+                    )
+                }
+                Icon(Icons.Default.Lock, null, Modifier.size(42.dp), tint = Color(0xFFFFD166))
+                Text("RSS DATA RECOVERY", color = onSurface, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Text("APP LOCKED", color = onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                if (prefs.getBoolean("pin_enabled", false)) {
                     var pin by remember { mutableStateOf("") }
-                    Text("ENTER YOUR 6-DIGIT PIN", color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
+                    Text("ENTER YOUR 6-DIGIT PIN", color = muted, fontWeight = FontWeight.Medium)
                     OutlinedTextField(
                         value = pin,
                         onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("6-DIGIT PIN", color = Color.White) },
+                        label = { Text("6-DIGIT PIN") },
                         singleLine = true,
-                        textStyle = LocalTextStyle.current.copy(color = Color.White),
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        textStyle = LocalTextStyle.current.copy(color = onSurface),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
                     )
                     Button(onClick = { if (pin.length == 6) onPinUnlock(pin) }, modifier = Modifier.fillMaxWidth()) {
@@ -172,10 +204,15 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                         Spacer(Modifier.width(7.dp))
                         Text("UNLOCK WITH PIN")
                     }
-                    TextButton(onClick = onForgotPin) { Text("FORGOT PIN", color = Color.White) }
+                    TextButton(onClick = onForgotPin) { Text("FORGOT PIN") }
+                    if (prefs.getBoolean("biometric_enabled", false)) {
+                        Text("BIOMETRIC PROMPT IS ALSO AVAILABLE.", color = muted, style = MaterialTheme.typography.bodySmall)
+                    }
+                } else if (prefs.getBoolean("biometric_enabled", false)) {
+                    Text("BIOMETRIC UNLOCK IS ACTIVE", color = muted)
+                    Text("Follow the biometric prompt to unlock.", color = muted, style = MaterialTheme.typography.bodySmall)
                 } else {
-                    Text("BIOMETRIC UNLOCK IS ACTIVE", color = Color.White.copy(alpha = 0.85f))
-                    Text("Follow the biometric prompt to unlock.", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                    Text("APP LOCK IS ENABLED. SET A PIN OR BIOMETRIC IN SETTINGS.", color = muted, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -204,7 +241,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
             AnimatedVisibility(visible, enter = fadeIn(tween(450)) + scaleIn(initialScale = .94f, animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(500))) {
                 Card(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 18.dp).shadow(3.dp, RoundedCornerShape(30.dp)), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp)) {
                     Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(104.dp))
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(104.dp)) }
                         Text("RSS DATA RECOVERY", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                         Text("CREATE YOUR PROFILE", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("FULL NAME") }, leadingIcon = { Icon(Icons.Default.Person, null, tint = Color(0xFF4F7CFF)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
@@ -236,7 +273,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
             AnimatedVisibility(visible, enter = fadeIn(tween(500)) + scaleIn(initialScale = .94f, animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(500))) {
                 Card(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 18.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .96f)), elevation = CardDefaults.cardElevation(3.dp)) {
                     Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(86.dp))
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(86.dp)) }
                         Text("CONGRATULATIONS 👏🎉", color = Color(0xFFFFD166).copy(alpha = alpha), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                         Text("WELCOME, $name!", color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text("YOUR RECOVERY SPACE IS READY.", fontWeight = FontWeight.SemiBold)
@@ -304,28 +341,28 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        // Keep the first drawer crisp and readable: no glass/blur effect and only a light scrim over content.
+        scrimColor = Color.Black.copy(alpha = if (dark) 0.22f else 0.12f),
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier
-                    .width(320.dp)
+                    .width(304.dp)
                     .fillMaxHeight()
                     .shadow(6.dp),
-                drawerContainerColor = Color.Transparent,
+                drawerContainerColor = if (dark) Color(0xFF111820) else Color.White,
                 drawerContentColor = if (dark) Color.White else Color(0xFF172033),
-                drawerShape = RoundedCornerShape(topEnd = 30.dp, bottomEnd = 30.dp)
+                drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
             ) {
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .graphicsLayer { if (!dark && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) renderEffect = BlurEffect(6f, 6f, TileMode.Clamp) }
+                        .background(if (dark) Color(0xFF111820) else Color.White)
                         .padding(14.dp)
                 ) {
                     Box(Modifier.fillMaxSize()) {
-                        SoftBlurGlow(Modifier.align(Alignment.TopCenter).offset(y = 90.dp).size(300.dp), palettes[theme.coerceIn(0, palettes.lastIndex)][1])
                         Column(Modifier.fillMaxSize()) {
                             Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(112.dp))
+                                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(112.dp)) }
                                 Spacer(Modifier.height(6.dp))
                                 Text(name,fontWeight=FontWeight.ExtraBold,fontSize=16.sp,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
                                 if(email.isNotBlank()) Text(email,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
@@ -593,8 +630,8 @@ private fun pageTitle(page: Page, mode: Mode): String = when (page) {
 }
 
 @Composable private fun FeaturesScreen(onQuick:()->Unit,onDeep:()->Unit,onResults:()->Unit,onPremium:()->Unit){
-    val features=listOf(Triple("Quick Recovery",Icons.Default.FlashOn,Color(0xFFE67E22)),Triple("Deep Recovery",Icons.Default.Search,Color(0xFF8E44AD)),Triple("Category Recovery",Icons.Default.Category,Color(0xFF18B7A0)),Triple("Results & Preview",Icons.Default.Folder,Color(0xFF4F7CFF)),Triple("Recovery History",Icons.Default.History,Color(0xFF9B5CFF)),Triple("App Lock & PIN",Icons.Default.Lock,Color(0xFFE74C3C)),Triple("Premium Recovery",Icons.Default.Star,Color(0xFFFFB21A)))
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Text("APP FEATURES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("Everything available in RSS Data Recovery.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};items(features){item->Card(Modifier.fillMaxWidth().clickable{when(item.first){"Quick Recovery","Category Recovery"->onQuick();"Deep Recovery"->onDeep();"Results & Preview"->onResults();"Premium Recovery"->onPremium()}}.shadow(2.dp,RoundedCornerShape(17.dp)),shape=RoundedCornerShape(17.dp),elevation=CardDefaults.cardElevation(1.dp)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(44.dp).background(item.third.copy(alpha=.12f),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){Icon(item.second,null,tint=item.third,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Text(item.first,Modifier.weight(1f),fontWeight=FontWeight.Bold);Icon(Icons.Default.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)}}}}
+    val features=listOf(Triple("Quick Recovery",Icons.Default.FlashOn,Color(0xFFE67E22)),Triple("Deep Recovery",Icons.Default.Search,Color(0xFF8E44AD)),Triple("Results & Preview",Icons.Default.Folder,Color(0xFF4F7CFF)),Triple("Recovery History",Icons.Default.History,Color(0xFF9B5CFF)),Triple("App Lock & PIN",Icons.Default.Lock,Color(0xFFE74C3C)),Triple("Premium Recovery",Icons.Default.Star,Color(0xFFFFB21A)))
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Text("APP FEATURES",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.ExtraBold);Text("Everything available in RSS Data Recovery.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};items(features){item->Card(Modifier.fillMaxWidth().clickable{when(item.first){"Quick Recovery"->onQuick();"Deep Recovery"->onDeep();"Results & Preview"->onResults();"Premium Recovery"->onPremium()}}.shadow(2.dp,RoundedCornerShape(17.dp)),shape=RoundedCornerShape(17.dp),elevation=CardDefaults.cardElevation(1.dp)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(44.dp).background(item.third.copy(alpha=.12f),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){Icon(item.second,null,tint=item.third,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Text(item.first,Modifier.weight(1f),fontWeight=FontWeight.Bold);Icon(Icons.Default.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)}}}}
 }
 
 @Composable private fun HomeScreen(quick:()->Unit,deep:()->Unit,history:()->Unit,onResults:()->Unit,onCategory:(Category)->Unit){
@@ -717,6 +754,8 @@ private fun categoryInfo(category: Category): Triple<String, ImageVector, Color>
 
 private suspend fun queryFiles(context: Context, category: Category?, onProgress: suspend (processed: Int, found: Int, total: Int) -> Unit = { _, _, _ -> }): List<FoundFile> = withContext(Dispatchers.IO) {
     val result = mutableListOf<FoundFile>()
+    // Content-based duplicate detection; only same-size candidates are hashed.
+    val seenHashesBySize = mutableMapOf<Long, MutableSet<String>>()
     val resolver = context.contentResolver
     val uri = MediaStore.Files.getContentUri("external")
     val projection = mutableListOf(
@@ -761,13 +800,34 @@ private suspend fun queryFiles(context: Context, category: Category?, onProgress
                 else -> Category.FILES
             }
             if (category == null || category == kind) {
-                result += FoundFile(it.getString(nameIndex) ?: "Unnamed file", size, Uri.withAppendedPath(uri, it.getLong(idIndex).toString()), kind, it.getLong(dateIndex), trashed)
+                val fileUri = Uri.withAppendedPath(uri, it.getLong(idIndex).toString())
+                val duplicate = if (size > 0L) {
+                    val hash = sha256Content(resolver, fileUri)
+                    hash != null && !seenHashesBySize.getOrPut(size) { mutableSetOf() }.add(hash)
+                } else false
+                if (!duplicate) {
+                    result += FoundFile(it.getString(nameIndex) ?: "Unnamed file", size, fileUri, kind, it.getLong(dateIndex), trashed)
+                }
             }
             if (processedRows == 1 || processedRows % 10 == 0 || processedRows == totalRows) onProgress(processedRows, result.size, totalRows)
         }
     }
     result
 }
+
+
+private fun sha256Content(resolver: ContentResolver, uri: Uri): String? = runCatching {
+    val digest = MessageDigest.getInstance("SHA-256")
+    resolver.openInputStream(uri)?.use { input ->
+        val buffer = ByteArray(64 * 1024)
+        while (true) {
+            val read = input.read(buffer)
+            if (read <= 0) break
+            digest.update(buffer, 0, read)
+        }
+    } ?: return null
+    digest.digest().joinToString("") { "%02x".format(it) }
+}.getOrNull()
 
 @Composable
 private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, scope: kotlinx.coroutines.CoroutineScope, upgrade: () -> Unit) {
@@ -933,7 +993,7 @@ private fun ResultsScreen(files: List<FoundFile>, premium: Boolean, scope: kotli
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
                         Text("UNLOCK MORE RECOVERY", fontWeight = FontWeight.ExtraBold)
-                        Text("Deep recovery, audio, video, files and original source details.", style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                        Text("Deep recovery and original-source recovery for non-image files require Premium. Image recovery remains free.", style = MaterialTheme.typography.bodySmall, maxLines = 2)
                     }
                     TextButton(onClick = upgrade) { Text("UPGRADE") }
                 }
@@ -1266,14 +1326,26 @@ private fun SettingsScreen(
         item {
             Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(22.dp)), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(64.dp))
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(64.dp)) }
                     Spacer(Modifier.height(8.dp))
                     Text("RSS DATA RECOVERY", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
                     Text("SETTINGS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
-        item { SettingSwitch("DARK APPEARANCE", dark, onDarkChange) }
+        item {
+            Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DarkMode, null, tint = Color(0xFF8E6CFF))
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("DARK APPEARANCE", fontWeight = FontWeight.Bold)
+                        Text(if (dark) "Dark appearance is ON." else "Light appearance is ON.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = dark, onCheckedChange = onDarkChange)
+                }
+            }
+        }
         item {
             Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp)) {
                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1371,8 +1443,8 @@ private fun SettingsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text("Create and verify a 6-digit PIN. Biometric unlock is optional.")
-                    OutlinedTextField(pin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) pin = v }, Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    OutlinedTextField(confirmPin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) confirmPin = v }, Modifier.fillMaxWidth(), label = { Text("VERIFY PIN") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                    OutlinedTextField(pin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) pin = v }, Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN") }, leadingIcon = { Icon(Icons.Default.Lock, null) }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                    OutlinedTextField(confirmPin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) confirmPin = v }, Modifier.fillMaxWidth(), label = { Text("VERIFY PIN") }, leadingIcon = { Icon(Icons.Default.VerifiedUser, null) }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
                     if (available) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Fingerprint, null, tint = Color(0xFF4F7CFF)); Spacer(Modifier.width(8.dp)); Text("BIOMETRIC UNLOCK", Modifier.weight(1f), fontWeight = FontWeight.Bold)
                         Switch(checked = biometric, onCheckedChange = { biometric = it })
