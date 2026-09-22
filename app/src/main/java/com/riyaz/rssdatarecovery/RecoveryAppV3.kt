@@ -214,12 +214,24 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
     var visible by remember { mutableStateOf(false) }
     val deviceEmails = remember {
         buildList {
-            runCatching { AccountManager.get(context).getAccountsByType("com.google").map { it.name } }.getOrNull()?.let { addAll(it) }
+            runCatching {
+                AccountManager.get(context).accounts
+                    .map { it.name.trim() }
+                    .filter { it.contains("@") }
+            }.getOrNull()?.let { addAll(it) }
             val stored = context.getSharedPreferences("rss_recovery", Context.MODE_PRIVATE).getString("email", "").orEmpty()
             if (stored.isNotBlank()) add(stored)
         }.distinct()
     }
-    LaunchedEffect(Unit) { delay(120); visible = true; if (email.isBlank() && deviceEmails.isNotEmpty()) email = deviceEmails.first() }
+    var autoEmailDetected by remember { mutableStateOf(false) }
+    LaunchedEffect(deviceEmails) {
+        delay(120)
+        visible = true
+        if (email.isBlank() && deviceEmails.isNotEmpty()) {
+            email = deviceEmails.first()
+            autoEmailDetected = true
+        }
+    }
     Box(Modifier.fillMaxSize()) {
         AnimatedBackdrop(systemDark)
         SoftBlurGlow(Modifier.align(Alignment.Center).size(330.dp), Color(0xFF2EA7FF))
@@ -232,13 +244,12 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                         Text("CREATE YOUR PROFILE", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("FULL NAME") }, leadingIcon = { Icon(Icons.Default.Person, null, tint = Color(0xFF4F7CFF)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
                         ExposedDropdownMenuBox(expanded = expanded && deviceEmails.size > 1, onExpandedChange = { if (deviceEmails.size > 1) expanded = !expanded }) {
-                            OutlinedTextField(email, { if (deviceEmails.size <= 1) email = it }, Modifier.fillMaxWidth().menuAnchor(), label = { Text("EMAIL ADDRESS") }, leadingIcon = { Icon(Icons.Default.Email, null, tint = Color(0xFF18B7A0)) }, trailingIcon = { if (deviceEmails.size > 1) ExposedDropdownMenuDefaults.TrailingIcon(expanded) }, singleLine = true, readOnly = deviceEmails.size > 1, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
+                            OutlinedTextField(email, { email = it }, Modifier.fillMaxWidth().menuAnchor(), label = { Text("EMAIL ADDRESS") }, leadingIcon = { Icon(Icons.Default.Email, null, tint = Color(0xFF18B7A0)) }, trailingIcon = { if (deviceEmails.isNotEmpty()) ExposedDropdownMenuDefaults.TrailingIcon(expanded) }, singleLine = true, readOnly = false, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
                             if (deviceEmails.size > 1) ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                 deviceEmails.forEach { account -> DropdownMenuItem(text = { Text(account) }, leadingIcon = { Icon(Icons.Default.AccountCircle, null, tint = Color(0xFF4F7CFF)) }, onClick = { email = account; expanded = false }) }
                             }
                         }
-                        if (deviceEmails.size > 1) Text("SELECT AN EMAIL ACCOUNT FROM THIS DEVICE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        else if (deviceEmails.size == 1) Text("EMAIL AUTOMATICALLY DETECTED FROM THIS DEVICE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (autoEmailDetected) Text("EMAIL AUTOMATICALLY DETECTED FROM THIS DEVICE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                         Button(onClick = { done(name.trim(), email.trim()) }, Modifier.fillMaxWidth(), enabled = name.trim().length > 1 && email.contains("@")) { Text("CONTINUE") }
                     }
                 }
