@@ -60,6 +60,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -234,7 +237,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
         SoftBlurGlow(Modifier.align(Alignment.Center).size(330.dp), Color(0xFFB7791F))
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             AnimatedVisibility(visible, enter = fadeIn(tween(500)) + scaleIn(initialScale = .94f, animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 12 }, animationSpec = tween(500))) {
-                Card(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 18.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .96f)), elevation = CardDefaults.cardElevation(3.dp)) {
+                Card(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 18.dp), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(3.dp)) {
                     Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(86.dp))
                         Text("CONGRATULATIONS 👏🎉", color = Color(0xFFFFD166).copy(alpha = alpha), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
@@ -317,16 +320,20 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .graphicsLayer { if (!dark && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) renderEffect = BlurEffect(6f, 6f, TileMode.Clamp) }
+                         .background(MaterialTheme.colorScheme.surface)
                         .padding(14.dp)
                 ) {
                     Box(Modifier.fillMaxSize()) {
                         SoftBlurGlow(Modifier.align(Alignment.TopCenter).offset(y = 90.dp).size(300.dp), palettes[theme.coerceIn(0, palettes.lastIndex)][1])
                         Column(Modifier.fillMaxSize()) {
-                            Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(112.dp))
-                                Spacer(Modifier.height(6.dp))
+                            Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)) {
+                                IconButton(onClick = { navigate(Page.SETTINGS) }, modifier = Modifier.align(Alignment.TopEnd)) {
+                                    Icon(Icons.Default.Settings, "Settings", tint = Color(0xFF4F7CFF))
+                                }
+                            }
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo),"RSS Data Recovery",Modifier.size(124.dp))
+                                Spacer(Modifier.height(2.dp))
                                 Text(name,fontWeight=FontWeight.ExtraBold,fontSize=16.sp,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
                                 if(email.isNotBlank()) Text(email,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
                             }
@@ -339,16 +346,15 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                                 BlurMenuItem("Results",Icons.Default.Folder,Color(0xFF18B7A0),page==Page.RESULTS){navigate(Page.RESULTS)}
                                 BlurMenuItem("Premium",Icons.Default.Star,Color(0xFFFFB21A),page==Page.PREMIUM){navigate(Page.PREMIUM)}
                                 BlurMenuItem("Recovery History",Icons.Default.History,Color(0xFF9B5CFF),page==Page.HISTORY){navigate(Page.HISTORY)}
-                                BlurMenuItem("Settings",Icons.Default.Settings,Color(0xFF4F7CFF),page==Page.SETTINGS){navigate(Page.SETTINGS)}
                             }
                             Column(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),"Razeen Secure Solution",Modifier.size(76.dp).clickable{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.rsscctvsolution.eu.cc")))})
+                                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo),"Razeen Secure Solution",Modifier.size(92.dp).clickable{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://rssapps.cv")))})
                                 Spacer(Modifier.height(2.dp))
                                 Text("RAZEEN SECURE SOLUTION",fontWeight=FontWeight.ExtraBold,fontSize=13.sp,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
                                 Text("Mobile & PC Software • CCTV • Networking • System Administration",style=MaterialTheme.typography.labelSmall,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
                                 Text("077 115 5504  •  070 155 5504",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
                                 Text("rsscctvsolution@gmail.com",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
-                                Text("www.rsscctvsolution.eu.cc",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+                                Text("www.rssapps.cv",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
                             }
                         }
                     }
@@ -444,11 +450,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                         prefs
                     )
 
-                    Page.FEATURES -> FeaturesScreen(
-                        onQuick = { mode = Mode.QUICK; category = null; navigate(Page.SCAN) },
-                        onDeep = { mode = Mode.DEEP; category = null; navigate(Page.SCAN) },
-                        onResults = { navigate(Page.RESULTS) },
-                        onPremium = { navigate(Page.PREMIUM) }                    )
+                    Page.FEATURES -> AppFeaturesFlowScreen()
 
                     Page.RESULTS -> ResultsScreen(
                         files,
@@ -456,7 +458,7 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                         scope
                     ) { navigate(Page.PREMIUM) }
 
-                    Page.PREMIUM -> PremiumScreen(prefs.getBoolean("premium", false)) { navigate(Page.PREMIUM) }
+                    Page.PREMIUM -> PremiumScreen(prefs.getBoolean("premium", false)) { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://rssapps.cv"))) }
                     Page.HISTORY -> HistoryScreen(prefs)
                     Page.SETTINGS -> SettingsScreen(prefs, dark, onDarkChange, theme, onThemeChange)
                 }
@@ -1371,8 +1373,8 @@ private fun SettingsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text("Create and verify a 6-digit PIN. Biometric unlock is optional.")
-                    OutlinedTextField(pin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) pin = v }, Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    OutlinedTextField(confirmPin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) confirmPin = v }, Modifier.fillMaxWidth(), label = { Text("VERIFY PIN") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                    OutlinedTextField(pin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) pin = v }, Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN") }, singleLine = true, visualTransformation = LastCharPasswordTransformation(pin.isNotEmpty()), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                    OutlinedTextField(confirmPin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) confirmPin = v }, Modifier.fillMaxWidth(), label = { Text("VERIFY PIN") }, singleLine = true, visualTransformation = LastCharPasswordTransformation(confirmPin.isNotEmpty()), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
                     if (available) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Fingerprint, null, tint = Color(0xFF4F7CFF)); Spacer(Modifier.width(8.dp)); Text("BIOMETRIC UNLOCK", Modifier.weight(1f), fontWeight = FontWeight.Bold)
                         Switch(checked = biometric, onCheckedChange = { biometric = it })
@@ -1449,6 +1451,15 @@ private fun AppFeaturesOnboarding(systemDark: Boolean, done: () -> Unit, skip: (
 }
 
 @Composable private fun SettingSwitch(title: String, value: Boolean, onChange: (Boolean) -> Unit) { val icon=when{title.contains("DARK")->Icons.Default.DarkMode;title.contains("LOCK")->Icons.Default.Lock;title.contains("HAPTIC")->Icons.Default.Vibration;title.contains("NOTIFICATION")->Icons.Default.Notifications;title.contains("AUTO")->Icons.Default.PlayCircle;title.contains("CONFIRM")->Icons.Default.Verified;title.contains("PREVIEW")->Icons.Default.Visibility;else->Icons.Default.History};val tint=when{title.contains("DARK")->Color(0xFF8E6CFF);title.contains("LOCK")->Color(0xFFE74C3C);title.contains("HAPTIC")->Color(0xFF18B7A0);title.contains("NOTIFICATION")->Color(0xFFFFB21A);title.contains("AUTO")->Color(0xFF4F7CFF);title.contains("CONFIRM")->Color(0xFF27AE60);title.contains("PREVIEW")->Color(0xFF9B5CFF);else->Color(0xFF2980B9)};Row(Modifier.fillMaxWidth().padding(vertical=4.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon,null,Modifier.size(24.dp),tint=tint);Spacer(Modifier.width(10.dp));Text(title,Modifier.weight(1f),fontWeight=FontWeight.Medium);Switch(checked=value,onCheckedChange=onChange)}}
+
+private class LastCharPasswordTransformation(private val revealLast: Boolean) : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val masked = buildString {
+            text.text.forEachIndexed { index, ch -> append(if (revealLast && index == text.text.lastIndex) ch else '•') }
+        }
+        return TransformedText(AnnotatedString(masked), OffsetMapping.Identity)
+    }
+}
 
 private fun hashPin(pin: String): String = MessageDigest.getInstance("SHA-256").digest(pin.toByteArray()).joinToString("") { it.toString(16).padStart(2, '0') }
 
