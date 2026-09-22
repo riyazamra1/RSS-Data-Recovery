@@ -114,7 +114,15 @@ fun RecoveryAppV3(appLocked: Boolean = false, onUnlock: () -> Unit = {}, onPinUn
         }
         AnimatedContent(targetState = Triple(registered, welcomed, featuresDone || featuresSkipped), transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) }, label = "entry") { state ->
             when {
-                !state.first -> RegistrationScreen(systemDark) { name, email -> prefs.edit().putBoolean("registered", true).putString("name", name).putString("email", email).apply(); registered = true; scope.launch { registerRecoveryCustomer(name, email) } }
+                !state.first -> RegistrationScreen(systemDark) { name, email ->
+                    scope.launch {
+                        val result = registerRecoveryCustomer(name.trim(), email.trim())
+                        if (result) {
+                            prefs.edit().putBoolean("registered", true).putString("name", name.trim()).putString("email", email.trim()).apply()
+                            registered = true
+                        }
+                    }
+                }
                 !state.second -> WelcomeScreen(prefs.getString("name", "USER") ?: "USER", systemDark) { prefs.edit().putBoolean("welcome_done", true).apply(); welcomed = true }
                 !state.third -> AppFeaturesOnboarding(systemDark, { prefs.edit().putBoolean("features_done", true).apply(); featuresDone = true }, { featuresSkipped = true })
                 else -> RecoveryMain(prefs, dark, { dark = it; prefs.edit().putBoolean("dark", it).apply() }, theme, { theme = it; prefs.edit().putInt("theme", it).apply() })
@@ -1552,8 +1560,9 @@ private fun storageUsage(context: Context): Triple<String, String, Float> {
 
 private fun formatBytes(value: Long): String = when { value < 1024 -> "$value B"; value < 1048576 -> "${value / 1024} KB"; value < 1073741824 -> "${value / 1048576} MB"; else -> "${value / 1073741824} GB" }
 
-private suspend fun registerRecoveryCustomer(name: String, email: String) {
-    runCatching {
-        RssCoreClient.register(name, email)
-    }
+private suspend fun registerRecoveryCustomer(name: String, email: String): Boolean {
+    return runCatching {
+        val result = RssCoreClient.register(name, email)
+        result.ok
+    }.getOrDefault(false)
 }
