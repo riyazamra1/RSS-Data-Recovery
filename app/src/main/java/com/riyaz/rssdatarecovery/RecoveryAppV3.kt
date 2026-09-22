@@ -1289,7 +1289,7 @@ private fun SettingsScreen(
             Card(Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(22.dp)), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_data_recovery_logo), "RSS Data Recovery", Modifier.size(64.dp))
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(0.dp))
                     Text("RSS DATA RECOVERY", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
                     Text("SETTINGS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -1328,6 +1328,8 @@ private fun SettingsScreen(
         item { SettingSwitch("CONFIRM BEFORE RECOVERY", confirmRecovery) { confirmRecovery = it; prefs.edit().putBoolean("confirm_recovery", it).apply() } }
         item { SettingSwitch("SHOW FILE PREVIEWS", previews) { previews = it; prefs.edit().putBoolean("previews", it).apply() } }
         item { SettingSwitch("SAVE RECOVERY HISTORY", saveHistory) { saveHistory = it; prefs.edit().putBoolean("save_history", it).apply() } }
+        item { SettingSwitch("AUTO LOCK WHEN APP LEAVES", prefs.getBoolean("lock_on_exit", true)) { prefs.edit().putBoolean("lock_on_exit", it).apply() } }
+        item { SettingSwitch("ANIMATED FEATURE EFFECTS", prefs.getBoolean("feature_animation", true)) { prefs.edit().putBoolean("feature_animation", it).apply() } }
         item {
             Card(Modifier.fillMaxWidth().shadow(1.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp)) {
                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
