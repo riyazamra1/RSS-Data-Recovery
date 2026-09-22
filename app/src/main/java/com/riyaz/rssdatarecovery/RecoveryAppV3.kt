@@ -1377,13 +1377,13 @@ private fun SettingsScreen(
         item {
             Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.rss_original_logo), "Razeen Secure Solution", Modifier.size(82.dp).clickable {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.rsscctvsolution.eu.cc")))
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://rssapps.cv")))
                 })
                 Spacer(Modifier.height(4.dp)); Text("RAZEEN SECURE SOLUTION", fontWeight = FontWeight.ExtraBold)
                 Text("Mobile & PC Software • CCTV Camera Installation • Networking • System Administration", style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 Text("077 115 5504  •  070 155 5504", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 Text("rsscctvsolution@gmail.com", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                Text("www.rsscctvsolution.eu.cc", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Text("www.rssapps.cv", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
