@@ -1,7 +1,6 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Keep a full splash drawable bounds so Android 12+ does not enlarge the artwork itself. -->
-    <item android:width="108dp" android:height="108dp" android:gravity="center">
-        <item android:width="72dp" android:height="72dp" android:gravity="center">
+    <item android:width="72dp" android:height="72dp" android:gravity="center">
+        <item android:width="48dp" android:height="48dp" android:gravity="center">
             <bitmap android:src="@drawable/rss_data_recovery_splash_logo" android:gravity="center" android:filter="true" />
         </item>
     </item>
