@@ -61,6 +61,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.sp
@@ -158,18 +159,37 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                 Icon(Icons.Default.Lock, null, Modifier.size(58.dp), tint = Color(0xFFFFD166))
                 Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 Text("APP LOCKED", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                if (prefs.getBoolean("pin_enabled", false) && !prefs.getBoolean("biometric_enabled", false)) {
+                if (prefs.getBoolean("pin_enabled", false)) {
                     var pin by remember { mutableStateOf("") }
                     Text("ENTER YOUR 6-DIGIT PIN", color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
+                    var revealLastPinDigit by remember { mutableStateOf(false) }
+                    LaunchedEffect(pin) {
+                        if (pin.isNotEmpty()) {
+                            revealLastPinDigit = true
+                            delay(1000)
+                            revealLastPinDigit = false
+                        }
+                    }
                     OutlinedTextField(
                         value = pin,
-                        onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin = it },
+                        onValueChange = {
+                            if (it.length <= 6 && it.all(Char::isDigit)) {
+                                pin = it
+                                if (it.length == 6) onPinUnlock(it)
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("6-DIGIT PIN", color = Color.White) },
                         singleLine = true,
                         textStyle = LocalTextStyle.current.copy(color = Color.White),
+                        visualTransformation = LastCharPasswordTransformation(revealLastPinDigit),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
                     )
+                    if (prefs.getBoolean("biometric_enabled", false)) {
+                        OutlinedButton(onClick = onUnlock, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Default.Fingerprint, null); Spacer(Modifier.width(7.dp)); Text("UNLOCK WITH BIOMETRIC")
+                        }
+                    }
                     Button(onClick = { if (pin.length == 6) onPinUnlock(pin) }, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.LockOpen, null)
                         Spacer(Modifier.width(7.dp))
@@ -1446,6 +1466,38 @@ private fun AppFeaturesOnboarding(systemDark: Boolean, done: () -> Unit, skip: (
             }
             Spacer(Modifier.height(10.dp))
             Text("${index + 1} / ${features.size}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+private fun AppFeaturesFlowScreen() {
+    val features = listOf(
+        Triple("SMART RECOVERY", "Quick and Deep Recovery intelligently scan supported storage for recoverable data.", Icons.Default.Restore),
+        Triple("IMAGE RECOVERY", "Recover photos with a focused visual workflow. Free users retain image recovery access.", Icons.Default.Image),
+        Triple("DEEP SCAN", "Search deeper storage locations with live progress, counts, pause/resume and rescan controls.", Icons.Default.Search),
+        Triple("RESULTS & RECOVERY", "Review results, preview supported files, select multiple items and recover to the RSS recovery folder.", Icons.Default.Assessment),
+        Triple("PRIVACY & SECURITY", "Use PIN and biometric protection, control notifications, history, previews, themes and storage permissions.", Icons.Default.Security)
+    )
+    var index by remember { mutableIntStateOf(0) }
+    val transition = rememberInfiniteTransition(label = "featureFlow")
+    val scale by transition.animateFloat(.94f, 1.06f, infiniteRepeatable(tween(1500), RepeatMode.Reverse), label = "featureScale")
+    val drift by transition.animateFloat(-24f, 24f, infiniteRepeatable(tween(2600), RepeatMode.Reverse), label = "featureDrift")
+    val item = features[index]
+    Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Box(Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
+            Icon(item.third, null, Modifier.size(210.dp).graphicsLayer { alpha = .06f; translationX = drift }, tint = MaterialTheme.colorScheme.primary)
+            Icon(item.third, null, Modifier.size(92.dp).graphicsLayer { scaleX = scale; scaleY = scale }, tint = MaterialTheme.colorScheme.primary)
+        }
+        Text(item.first, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Spacer(Modifier.height(12.dp))
+        Text(item.second, style = MaterialTheme.typography.bodyLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 25.sp)
+        Spacer(Modifier.height(22.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { features.indices.forEach { i -> Box(Modifier.size(if (i == index) 24.dp else 8.dp, 8.dp).clip(RoundedCornerShape(8.dp)).background(if (i == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = .22f))) } }
+        Spacer(Modifier.height(24.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = { if (index > 0) index-- }, enabled = index > 0, Modifier.weight(1f)) { Text("BACK") }
+            Button(onClick = { if (index < features.lastIndex) index++ else index = 0 }, Modifier.weight(1f)) { Text(if (index == features.lastIndex) "RESTART" else "NEXT") }
         }
     }
 }
