@@ -59,7 +59,7 @@ class MainActivity : FragmentActivity() {
                 val systemDark = isSystemInDarkTheme()
                 val splashPulse = rememberInfiniteTransition(label = "splashPulse")
                 val logoScale by splashPulse.animateFloat(
-                    0.96f, 1.02f,
+                    0.99f, 1.0f,
                     infiniteRepeatable(tween(900), RepeatMode.Reverse),
                     label = "splashLogoScale"
                 )
@@ -74,7 +74,7 @@ class MainActivity : FragmentActivity() {
                         Image(
                             painter = painterResource(id = R.drawable.rss_data_recovery_logo),
                             contentDescription = "RSS Data Recovery",
-                            modifier = Modifier.size(160.dp).graphicsLayer {
+                            modifier = Modifier.size(110.dp).graphicsLayer {
                                 scaleX = logoScale
                                 scaleY = logoScale
                             },
