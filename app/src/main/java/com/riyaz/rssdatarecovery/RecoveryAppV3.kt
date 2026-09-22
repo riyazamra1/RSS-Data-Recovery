@@ -1393,10 +1393,18 @@ private fun SettingsScreen(
             onDismissRequest = { showPinDialog = false },
             title = { Text("APP LOCK SECURITY") },
             text = {
+                var revealPin by remember { mutableStateOf(false) }
+                var revealConfirm by remember { mutableStateOf(false) }
+                LaunchedEffect(pin) {
+                    if (pin.isNotEmpty()) { revealPin = true; delay(1000); revealPin = false }
+                }
+                LaunchedEffect(confirmPin) {
+                    if (confirmPin.isNotEmpty()) { revealConfirm = true; delay(1000); revealConfirm = false }
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text("Create and verify a 6-digit PIN. Biometric unlock is optional.")
-                    OutlinedTextField(pin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) pin = v }, Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN") }, singleLine = true, visualTransformation = LastCharPasswordTransformation(pin.isNotEmpty()), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    OutlinedTextField(confirmPin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) confirmPin = v }, Modifier.fillMaxWidth(), label = { Text("VERIFY PIN") }, singleLine = true, visualTransformation = LastCharPasswordTransformation(confirmPin.isNotEmpty()), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                    Text("Create and verify a 6-digit PIN. Each newly entered digit is briefly visible for 1 second, then hidden.")
+                    OutlinedTextField(pin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) pin = v }, Modifier.fillMaxWidth(), label = { Text("6-DIGIT PIN") }, singleLine = true, visualTransformation = LastCharPasswordTransformation(revealPin), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                    OutlinedTextField(confirmPin, { v -> if (v.length <= 6 && v.all(Char::isDigit)) confirmPin = v }, Modifier.fillMaxWidth(), label = { Text("VERIFY PIN") }, singleLine = true, visualTransformation = LastCharPasswordTransformation(revealConfirm), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
                     if (available) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Fingerprint, null, tint = Color(0xFF4F7CFF)); Spacer(Modifier.width(8.dp)); Text("BIOMETRIC UNLOCK", Modifier.weight(1f), fontWeight = FontWeight.Bold)
                         Switch(checked = biometric, onCheckedChange = { biometric = it })
