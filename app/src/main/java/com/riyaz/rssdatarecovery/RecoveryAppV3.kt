@@ -150,6 +150,8 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
 }
 
 @Composable private fun LockScreen(prefs: SharedPreferences, onUnlock: () -> Unit, onPinUnlock: (String) -> Unit, onForgotPin: () -> Unit) {
+    val biometricEnabled = prefs.getBoolean("biometric_enabled", false)
+    val pinEnabled = prefs.getBoolean("pin_enabled", false)
     Box(Modifier.fillMaxSize()) {
         AnimatedBackdrop()
         SoftBlurGlow(Modifier.align(Alignment.Center).size(320.dp), Color(0xFF8B5CF6))
@@ -167,9 +169,54 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                 Icon(Icons.Default.Lock, null, Modifier.size(58.dp), tint = Color(0xFFFFD166))
                 Text("RSS DATA RECOVERY", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 Text("APP LOCKED", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                if (prefs.getBoolean("pin_enabled", false)) {
+
+                if (biometricEnabled) {
+                    Icon(Icons.Default.Fingerprint, null, Modifier.size(64.dp), tint = Color(0xFF67D5FF))
+                    Text("BIOMETRIC UNLOCK", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Biometric unlock has first priority. The biometric prompt is opened automatically.",
+                        color = Color.White.copy(alpha = 0.82f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Button(onClick = onUnlock, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Fingerprint, null)
+                        Spacer(Modifier.width(7.dp))
+                        Text("UNLOCK WITH BIOMETRIC")
+                    }
+                    if (pinEnabled) {
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.14f))
+                        Text("PIN FALLBACK", color = Color.White.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold)
+                        var pin by remember { mutableStateOf("") }
+                        var revealLastPinDigit by remember { mutableStateOf(false) }
+                        LaunchedEffect(pin) {
+                            if (pin.isNotEmpty()) {
+                                revealLastPinDigit = true
+                                delay(1000)
+                                revealLastPinDigit = false
+                            }
+                        }
+                        OutlinedTextField(
+                            value = pin,
+                            onValueChange = {
+                                if (it.length <= 6 && it.all(Char::isDigit)) {
+                                    pin = it
+                                    if (it.length == 6) onPinUnlock(it)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("6-DIGIT PIN", color = Color.White) },
+                            singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(color = Color.White),
+                            visualTransformation = LastCharPasswordTransformation(revealLastPinDigit),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
+                        )
+                        Text("Enter 6 digits to unlock automatically.", color = Color.White.copy(alpha = 0.62f), style = MaterialTheme.typography.labelSmall)
+                        TextButton(onClick = onForgotPin) { Text("FORGOT PIN", color = Color.White) }
+                    }
+                } else if (pinEnabled) {
+                    Text("ENTER YOUR 6-DIGIT PIN", color = Color.White, fontWeight = FontWeight.Medium)
                     var pin by remember { mutableStateOf("") }
-                    Text("ENTER YOUR 6-DIGIT PIN", color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
                     var revealLastPinDigit by remember { mutableStateOf(false) }
                     LaunchedEffect(pin) {
                         if (pin.isNotEmpty()) {
@@ -193,26 +240,15 @@ private fun SoftBlurGlow(modifier: Modifier = Modifier, tint: Color = Color(0xFF
                         visualTransformation = LastCharPasswordTransformation(revealLastPinDigit),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
                     )
-                    if (prefs.getBoolean("biometric_enabled", false)) {
-                        OutlinedButton(onClick = onUnlock, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.Fingerprint, null); Spacer(Modifier.width(7.dp)); Text("UNLOCK WITH BIOMETRIC")
-                        }
-                    }
-                    Button(onClick = { if (pin.length == 6) onPinUnlock(pin) }, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.LockOpen, null)
-                        Spacer(Modifier.width(7.dp))
-                        Text("UNLOCK WITH PIN")
-                    }
+                    Text("Enter 6 digits to unlock automatically.", color = Color.White.copy(alpha = 0.62f), style = MaterialTheme.typography.labelSmall)
                     TextButton(onClick = onForgotPin) { Text("FORGOT PIN", color = Color.White) }
                 } else {
-                    Text("BIOMETRIC UNLOCK IS ACTIVE", color = Color.White.copy(alpha = 0.85f))
-                    Text("Follow the biometric prompt to unlock.", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                    Text("NO UNLOCK METHOD IS CONFIGURED.", color = Color.White.copy(alpha = 0.85f))
                 }
             }
         }
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun RegistrationScreen(systemDark: Boolean, done: (String, String) -> Unit) {
     val context = LocalContext.current
