@@ -1561,8 +1561,8 @@ private fun AppFeaturesFlowScreen() {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { features.indices.forEach { i -> Box(Modifier.size(if (i == index) 24.dp else 8.dp, 8.dp).clip(RoundedCornerShape(8.dp)).background(if (i == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = .22f))) } }
         Spacer(Modifier.height(24.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = { if (index > 0) index-- }, enabled = index > 0, Modifier.weight(1f)) { Text("BACK") }
-            Button(onClick = { if (index < features.lastIndex) index++ else index = 0 }, Modifier.weight(1f)) { Text(if (index == features.lastIndex) "RESTART" else "NEXT") }
+            OutlinedButton(onClick = { if (index > 0) index-- }, enabled = index > 0, modifier = Modifier.weight(1f)) { Text("BACK") }
+            Button(onClick = { if (index < features.lastIndex) index++ else index = 0 }, modifier = Modifier.weight(1f)) { Text(if (index == features.lastIndex) "RESTART" else "NEXT") }
         }
     }
 }
